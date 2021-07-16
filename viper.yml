@@ -1,0 +1,22 @@
+name: viper
+channels:
+ - conda-forge
+ - bioconda
+ - defaults
+dependencies:
+ - samtools=1.12
+ - krona=2.8
+ - spades=3.15.2
+ - trimmomatic=0.39
+ - pigz
+ - bwa-mem2=2.2.1
+ - diamond=2.0.9
+ - python=3.*
+ - bowtie2=2.4.2
+ - bbmap=38.90
+ - fastqc=0.11.9
+ - multiqc=1.10.1
+ - seqkit=0.16.0
+ - quast=5.0.2
+ - blast=2.11.0
+ - biopython=1.79

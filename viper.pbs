@@ -1,0 +1,22 @@
+#!/bin/bash
+#PBS -l nodes=1:ppn=36
+#PBS -l walltime=12:00:00
+#PBS -o stdout.$PBS_JOBID
+#PBS -e stderr.$PBS_JOBID
+
+#while read line; do
+#qsub viper.pbs -v line="$line"
+#done < names.txt
+
+#Move to wherever your files are
+cd $VSC_SCRATCH
+
+#Activate conda environment
+source activate viper
+
+#Make sure programs in conda viper environment are found first in PATH
+export PATH="$CONDA_PREFIX/bin:$PATH"
+
+#Run viper.sh script with desired options
+viper.sh -1 $line.R1.fastq.gz -2 $line.R2.fastq.gz -x 130 -p /staging/leuven/stg_00029/DB/trimmomatic/primer_WTA2_Nextera.fa -g /staging/leuven/stg_00029/mosquito_genome/combined_mg \
+	--triple-assembly -d ~/staging/DB/nr/latest/nr.dmnd -o $line -t 36
