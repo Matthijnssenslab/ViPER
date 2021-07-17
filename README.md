@@ -2,13 +2,12 @@
 
 # ViPER - Virome Paired-End Reads pipeline
 [![Generic badge](https://img.shields.io/badge/GitHub-MatthijnssensLab-brightgreen?logo=github)](https://github.com/Matthijnssenslab)
-[![Generic badge](https://img.shields.io/badge/NetoVIR-doi.org%2F10.1038%2Fsrep16532-blue)](https://doi.org/10.1038/srep16532)
 [![Generic badge](https://img.shields.io/twitter/url?label=%40JMatthijnssens&style=social&url=https%3A%2F%2Ftwitter.com%2FJMatthijnssens)](https://twitter.com/JMatthijnssens)
 [![Generic badge](https://img.shields.io/badge/Laboratory%20of%20Viral%20Metagenomics-1877F2?style=flat-square&logo=facebook&logoColor=white)](https://www.facebook.com/MatthijnssensLab)
 
-The ViPER (Virome Paired-End Reads pipeline) script is used by the Laboratory of Viral Metagenomics to process raw paired-end Illumina reads. Reads are first trimmed by Trimmomatic, subsequently reads originating from the contaminome (sequenced and assembled negative controls) and the host genome can be removed by Bowtie2. Left-over reads are further assembled into contigs by metaSPAdes. To overcome the problem of viral genomes breaking into multiple pieces during assembly due to huge coverage, which makes the resulting De Bruijn graph too difficult to interpret by the assembler, a subset of 10 and 1% of the original reads may be applied (by `--triple-assembly`). These subsetted reads are also assembled and resulting contigs of all three assemblies (from original reads, 10% and 1% subset) are subsequently clustered together to remove redundancy in the contig set. This way, shorter contigs belonging to the same genome but from a different assembly will be removed and only the most complete contigs will be retained.
+The ViPER (Virome Paired-End Reads pipeline) script is used by the Laboratory of Viral Metagenomics to process raw paired-end Illumina reads. Reads are first trimmed by Trimmomatic, subsequently reads originating from the contaminome (sequenced and assembled negative controls) and the host genome can be removed by Bowtie2. Left-over reads are further assembled into contigs by metaSPAdes. To overcome the problem of viral genomes breaking into multiple pieces during assembly due to huge coverage, which makes the resulting De Bruijn graph too difficult to interpret by the assembler, a subset of 10 and 1% of the original reads may be applied (by `--triple-assembly`). These subsetted reads are also assembled and resulting contigs of all three assemblies (from original reads, 10% and 1% subset) are subsequently clustered together to remove redundancy in the contig set. This way shorter contigs belonging to the same genome, but from a different assembly, will be removed and only the most complete contigs will be retained.
 
-Final contigs can than be classified by DIAMOND and KronaTools with a lowest common ancestor approach. This is possible right after assembly with the `viper.sh` script, but is not necessary. Contigs can still be classified later on by the `viper-annotation.sh` script.
+Final contigs can than be classified by DIAMOND and KronaTools with a lowest common ancestor approach. This is possible right after assembly with the `viper.sh` script, but is not required. Contigs can still be classified later on by the `viper-annotation.sh` script.
 
 ## Setup
 ```bash
@@ -56,7 +55,7 @@ OPTIONAL:
    				All assembled scaffolds will be concatenated and clustered together to remove redundancy (see also --cluster-cover/identity).
    --cluster-cover		% of the shortest sequence that should be covered during clustering. (default: 99)
    --cluster-identity		% of ANI for clustering scaffolds. (default: 99)
-   --memory-limit		Memory to be reserved for SPAdes assembly in GB. (default: 250)
+   --memory-limit		Memory (in GB) to be reserved for SPAdes assembly. (default: 250)
 
  Annotation:
    -d | --diamond-path		Path to diamond database. If not given, Diamond and KronaTools will be skipped.

@@ -53,7 +53,7 @@ OPTIONAL:
    				All assembled scaffolds will be concatenated and clustered together to remove redundancy (see also --cluster-cover/identity).
    --cluster-cover		% of the shortest sequence that should be covered during clustering. (default: 99)
    --cluster-identity		% of ANI for clustering scaffolds. (default: 99)
-   --memory-limit			Memory to be reserved for SPAdes assembly in GB. (default: 250)
+   --memory-limit			Memory (in GB) to be reserved for SPAdes assembly. (default: 250)
 
  Annotation:
    -d | --diamond-path		Path to diamond database. If not given, Diamond and KronaTools will be skipped.
