@@ -1,3 +1,16 @@
-
-.ipynb_checkpoints/README-checkpoint.md
-.ipynb_checkpoints/wip-checkpoint.md
+#Mac stuff:
+.DS_Store
+*/.DS_Store
+#Notebook temps/
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*.ipynb
+#Large files
+*/*.fasta*
+*/*.fastq*
+*/*.fa*
+*/*.fq*
+*/*.bt*
+*.fa*
+*/*.m8
+*/*.magnitudes*
+*.drawio
