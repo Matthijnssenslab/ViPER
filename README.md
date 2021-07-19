@@ -15,7 +15,9 @@ Final contigs can than be classified by DIAMOND and KronaTools with a lowest com
     - [Full usage](#Full-usage)
     - [Triple assembly](#Triple-assembly)
 
-<center><img src="ViPER.svg"/></center>
+<p align="center">
+    <img src="ViPER.svg"/>
+</p>
 
 ## Setup
 
