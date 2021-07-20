@@ -10,7 +10,7 @@ dependencies:
  - trimmomatic=0.39
  - pigz
  - bwa-mem2=2.2.1
- - diamond=2.0.9
+ - diamond=2.0.11
  - python=3.*
  - bowtie2=2.4.2
  - bbmap=38.90
