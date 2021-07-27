@@ -33,8 +33,8 @@ OPTIONS:
 --------
 
 REQUIRED:
-   -1 | --read1			Path to the file with forward reads.
-   -2 | --read2			Path to the file with reverse reads.
+   -1 | --read1			Path to the file with forward reads, may be gzipped.
+   -2 | --read2			Path to the file with reverse reads, may be gzipped.
    
 OPTIONAL:
  Trimming:
@@ -55,7 +55,7 @@ OPTIONAL:
    --cluster-identity		% of ANI for clustering scaffolds. (default: 99)
    --memory-limit			Memory (in GB) to be reserved for SPAdes assembly. (default: 250)
 
- Annotation:
+ Classification:
    -d | --diamond-path		Path to diamond database. If not given, Diamond and KronaTools will be skipped.
    -s | --sensitivity		Can be 'default', 'fast', 'mid', 'more', 'very' and 'ultra' (default corresponds to --sensitive setting of Diamond).
    
@@ -96,28 +96,6 @@ perl -ne '
     die "Invalid char $1 ($.)\n" if !$id && /([^A-Za-z\n])/
     ' -- "$1"
     }
-    
-#Check BWA index
-#WORK TO DO: 
-#check_bwaidx() {
-#if [[ -s "$1".bwt.2bit.64 ]]; then
-#	index='0123 amb ann bwt.2bit.64 pac'
-#	for i in $index; do
-#		if [[ ! -s "$1".$i ]]; then
-#			>&2 printf '\n%s\n\n' "[WARNING]: $1."$i", a part of the mandatory bwa-mem2 index, not found. Making BWA index from "$1"."
-#			bwaidx=1
-#			break
-#		fi
-#	done
-#	if [[ $bwaidx -eq 1 ]]; then
-#	bwa-mem2 index "$1"[.fa*]* #??
-#	fi
-#else
-#	>&2 printf '\n%s\n\n' "[ERROR]: $1 does not exist, not able to make a BWA index."
-#	return 1
-#fi
-#unset bwaidx
-#}
 
 ##### OPTIONS #####
 
@@ -397,13 +375,6 @@ if [[ $contaminome_removal -eq 1 ]]; then
 	fi
 fi
 
-#if [[ $contaminome_removal -eq 1 ]]; then
-#	check_bwaidx "$contaminome"
-#	if [[ ! $? -eq 0 ]]; then
-#		>&2 printf '\n%s\n\n' "[ERROR]: There is something wrong with the indexed contaminome $contaminome."
-#		exit 1
-#	fi
-#fi
 
 ### Check if given diamond database is valid 
 if [[ $diamond -eq 1 ]]; then
@@ -437,14 +408,6 @@ if [[ $host_removal -eq 1 ]]; then
 		fi
 	fi
 fi
-
-#if [[ $host_removal -eq 1 ]]; then
-#	check_bwaidx "$host_genome"
-#	if [[ ! $? -eq 0 ]]; then
-#		>&2 printf '\n%s\n\n' "[ERROR]: There is something wrong with the indexed host genome $host_genome."
-#		exit 1
-#	fi
-#fi
 
 # Extract file names
 read1=$(get_name "$read1_path")
@@ -513,7 +476,6 @@ if [[ $contaminome_removal -eq 1 ]]; then
 	# Paired
 	bowtie2 --very-sensitive -p "$threads" -x "$contaminome" \
 	-1 "$sample".trimmed.R1.fastq.gz -2 "$sample".trimmed.R2.fastq.gz -S mapunmap_pair.sam
-	#bwa-mem2 mem -t "$threads" -o mapunmap_pair.sam "$contaminome" "$sample".trimmed.R1.fastq.gz "$sample".trimmed.R2.fastq.gz
 	if [[ ! $? -eq 0 ]]; then
 		>&2 printf '\n%s\n\n' "[ERROR]: Something went wrong during the contaminome removal of the paired reads."
 		exit 1 
@@ -529,7 +491,6 @@ if [[ $contaminome_removal -eq 1 ]]; then
 
 	# Unpaired
 	bowtie2 --very-sensitive -p "$threads" -x "$contaminome" -U "$sample".trimmed.unpaired.fastq.gz -S mapunmap_unpair.sam
-	#bwa-mem2 mem -t "$threads" -o mapunmap_unpair.sam "$contaminome" "$sample".trimmed.unpaired.fastq.gz
 	if [[ ! $? -eq 0 ]]; then
 		>&2 printf '\n%s\n\n' "[ERROR]: Something went wrong during the contaminome removal of the unpaired reads."
 		exit 1 
@@ -559,7 +520,6 @@ if [[ $host_removal -eq 1 ]]; then
 	printf '\n%s\n\n' "[INFO]: Removing host genome."
 	# Paired
 	bowtie2 --very-sensitive -p "$threads" -x "$host_genome" -1 "$final_read1" -2 "$final_read2" -S mapunmap_pair.sam
-	#bwa-mem2 mem -t "$threads" -o mapunmap_pair.sam "$host_genome" "$final_read1" "$final_read2"
 	if [[ ! $? -eq 0 ]]; then
 		>&2 printf '\n%s\n\n' "[ERROR]: Something went wrong during the host genome removal of the paired reads."
 		exit 1 
@@ -575,7 +535,6 @@ if [[ $host_removal -eq 1 ]]; then
 
 	# Unpaired
 	bowtie2 --very-sensitive -p "$threads" -x "$host_genome" -U "$final_unpaired" -S mapunmap_unpair.sam
-	#bwa-mem2 mem -t "$threads" -o mapunmap_unpair.sam "$host_genome" "$final_unpaired"
 	if [[ ! $? -eq 0 ]]; then
 		>&2 printf '\n%s\n\n' "[ERROR]: Something went wrong during the host genome removal of the unpaired reads."
 		exit 1 
@@ -601,7 +560,6 @@ mkdir -p "$outdir"/QC/FASTQC
 fastqc -o "$outdir"/QC/FASTQC -t "$threads" -q "$final_read1" "$final_read2" "$final_unpaired"
 
 # After all samples are done you can run multiqc to output the QC of all samples in 1 file
-#cd $VSC_SCRATCH/$run
 #multiqc -o QC .
 
 ##############################################################################################################################################################

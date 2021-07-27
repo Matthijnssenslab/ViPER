@@ -14,9 +14,9 @@ filterlength=0
 usage()
 {
 cat << EOF
-usage: viper-annotation.sh [OPTIONS]
+usage: viper-classify.sh [OPTIONS]
 
-This script takes a fasta file as input and uses Diamond and Krona to annotate and classify the input sequences and make a Krona pie chart.
+This script takes a fasta file as input and uses Diamond and Krona to classify the input sequences and make a Krona pie chart.
 
 OPTIONS:
 --------
@@ -319,7 +319,7 @@ if [[ $diamond -eq 1 ]]; then
 fi
 
 if [[ $? -eq 0 ]]; then
-	printf '\n%s\n' "[INFO]: ViPER-annotation finished successfully! "
+	printf '\n%s\n' "[INFO]: viper-classify finished successfully! "
 else
-	>&2 printf '\n%s\n' "[ERROR]: ViPER-annotation finished abnormally."
+	>&2 printf '\n%s\n' "[ERROR]: viper-classify finished abnormally."
 fi
