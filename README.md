@@ -20,6 +20,7 @@ These scripts are made publicly available in an effort to standardize viromics a
     - [Command line options](#Command-line-options)
         - [Triple assembly](#Triple-assembly)
     - [Quality control](#Quality-control)
+- [HPC](#HPC)
 
 ## Overview
 <p align="center">
@@ -123,3 +124,31 @@ multiqc -o multiQC .
 ```
 
 Also, some statistics of the assembly are calculated with [Quast](http://quast.sourceforge.net/quast.html). These statistics can be found in the QC directory under `QUAST/report.tsv`.
+
+# HPC
+To run the ViPER script on an HPC with a Portable Batch System (PBS), you can submit `viper.pbs` after you modify the paths in the PBS script.
+
+A typical PBS script would look like this:
+```bash
+#!/bin/bash
+#PBS -l nodes=1:ppn=36
+#PBS -l walltime=12:00:00
+#PBS -o stdout.$PBS_JOBID
+#PBS -e stderr.$PBS_JOBID
+
+cd $VSC_SCRATCH
+source activate viper
+export PATH="$CONDA_PREFIX/bin:$PATH" #To make sure software is found first in viper environment
+viper.sh -1 $line.R1.fastq.gz -2 $line.R2.fastq.gz -x 130 -p /path/to/primer/file -g /path/to/host/genome \
+	--triple-assembly -d /path/to/diamond/database -o $line -t 36
+```
+Note that the above PBS script is used when you want to submit multiple jobs (eg. for a set of samples), hence the variable `$line` which would be the sample name.
+
+To submit multiple jobs you can use a `while` loop:
+```bash
+while read line; do
+qsub viper.pbs -v line="$line"
+done < names.txt
+```
+
+`names.txt` has the name of each sample on a new line.
