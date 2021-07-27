@@ -19,8 +19,9 @@ These scripts are made publicly available in an effort to standardize viromics a
     - [Quick start](#Quick-start)
     - [Command line options](#Command-line-options)
         - [Triple assembly](#Triple-assembly)
-- [Quality control](#Quality-control)
+    - [Quality control](#Quality-control)
 
+## Overview
 <p align="center">
     <img src="ViPER.svg">
 </p>
@@ -114,4 +115,11 @@ To make use of the classification features of `viper.sh`, you have to provide a 
 
 `-t | --threads`
     Number of threads to use. (default: 4)
+    
+## Quality control
+By default some quality control checks are implemented in the `viper.sh` script. The quality of trimmed reads (forward, reverse and unpaired) is checked by [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/), this gives you separate files for each read file which can be combined by [MultiQC](https://multiqc.info/). Run following line in the QC directory after `viper.sh` has finished: 
+```bash
+multiqc -o multiQC .
+```
 
+Also, some statistics of the assembly are calculated with [Quast](http://quast.sourceforge.net/quast.html). These statistics can be found in the QC directory under `QUAST/report.tsv`.
