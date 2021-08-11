@@ -1,0 +1,15 @@
+# YAML 1.2
+---
+authors: 
+  -
+    affiliation: "Laboratory of Viral Metagenomics, KU Leuven"
+    family-names: "De Coninck"
+    given-names: Lander
+    orcid: "https://orcid.org/0000-0001-6847-2379"
+cff-version: "1.1.0"
+date-released: 2021-08-11
+doi: "10.5281/zenodo.5502204"
+message: "If you use this software, please cite it using these metadata."
+title: ViPER
+version: "v1.0"
+...
