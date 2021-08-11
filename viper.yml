@@ -15,7 +15,7 @@ dependencies:
  - bowtie2=2.4.2
  - bbmap=38.90
  - fastqc=0.11.9
- - multiqc=1.10.1
+ - multiqc=1.11
  - seqkit=0.16.0
  - quast=5.0.2
  - blast=2.11.0
