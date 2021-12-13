@@ -465,7 +465,9 @@ printf '\n%s\n\n' "[INFO]: Starting ViPER! First step: trimming."
 mkdir -p "$outdir"
 cd "$outdir"
 
-if [[ ! $move -eq 0 && $skip_trimming -eq 1 && $contaminome_removal -eq 0 && $host_removal -eq 0 && $triple -eq 0 ]]; then
+if [[ $move -eq 0 && $skip_trimming -eq 1 && $contaminome_removal -eq 0 && $host_removal -eq 0 && $triple -eq 0 ]]; then
+	printf ''
+else
 	mkdir -p READ
 fi
 
@@ -479,7 +481,9 @@ if [[ $move -eq 1 ]]; then
 	read2_path=$(get_path READ/"$read2")
 	printf '\n%s\n\n' "[INFO]: Moving reads to $(get_path ../READ)"
 	cd READ
-elif [[ ! $move -eq 0 && $skip_trimming -eq 1 && $contaminome_removal -eq 0 && $host_removal -eq 0 && $triple -eq 0 ]]; then
+elif [[ $move -eq 0 && $skip_trimming -eq 1 && $contaminome_removal -eq 0 && $host_removal -eq 0 && $triple -eq 0 ]]; then
+	printf ''
+else
 	cd READ
 fi
 
