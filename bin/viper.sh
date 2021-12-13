@@ -59,7 +59,7 @@ OPTIONAL:
    				All assembled scaffolds will be concatenated and clustered together to remove redundancy (see also --cluster-cover/identity).
    --cluster-cover		% of the shortest sequence that should be covered during clustering. (default: 85)
    --cluster-identity		% of ANI for clustering scaffolds. (default: 95)
-   --memory-limit		Memory (in GB) to be reserved for SPAdes assembly. (default: 250)
+   --memory-limit		Memory (in GB) to be reserved for SPAdes assembly. (default: autodetected by SPAdes)
 
  Classification:
    -d | --diamond-path		Path to diamond database. If not given, Diamond and KronaTools will be skipped.
@@ -385,14 +385,19 @@ else
 fi
 
 if [[ $unpaired -eq 1 ]]; then
-	if [[ -s "$unpaired_path" ]]; then
-		seqkit head "$unpaired_path" | seqkit stats | grep 'FASTQ' > /dev/null 2>&1
-		if [[ ! $? -eq 0 ]]; then
-			>&2 printf '\n%s\n\n' "[ERROR]: The provided file "$unpaired_path" is not a FASTQ file."
-			exit 1
-		fi
+	if [[ $skip_trimming -eq 0 ]]; then
+		>&2 printf '\n%s\n\n' "[ERROR]: You have to skip trimming if you want to provide an unpaired read file."
+		exit 1
 	else
-		>&2 printf '\n%s\n\n' "[ERROR]: The provided path "$unpaired_path" does not lead to a file."
+		if [[ -s "$unpaired_path" ]]; then
+			seqkit head "$unpaired_path" | seqkit stats | grep 'FASTQ' > /dev/null 2>&1
+			if [[ ! $? -eq 0 ]]; then
+				>&2 printf '\n%s\n\n' "[ERROR]: The provided file "$unpaired_path" is not a FASTQ file."
+				exit 1
+			fi
+		else
+			>&2 printf '\n%s\n\n' "[ERROR]: The provided path "$unpaired_path" does not lead to a file."
+		fi
 	fi
 fi
 
@@ -509,7 +514,7 @@ if [[ $skip_trimming -eq 0 ]]; then
 	cd "$outdir"/READ/TRIMMED
 	rm "$sample".R1.unpaired.fastq.gz
 	rm "$sample".R2.unpaired.fastq.gz
-	
+
 	printf '\n%s\n\n' "[INFO]: Clumpifying trimmed reads for better compression."
 	clumpify.sh reorder \
 		in="$sample".TRIM.R1.fastq.gz \
@@ -524,32 +529,19 @@ if [[ $skip_trimming -eq 0 ]]; then
 		ziplevel=9 \
 		deleteinput=t
 
-	cd "$outdir"/READ/TRIMMED
-	rm "$sample".R1.unpaired.fastq.gz
-	rm "$sample".R2.unpaired.fastq.gz
-	
-	printf '\n%s\n\n' "[INFO]: Clumpifying trimmed reads for better compression."
-	clumpify.sh reorder \
-		in="$sample".TRIM.R1.fastq.gz \
-		in2="$sample".TRIM.R2.fastq.gz \
-		out="$sample".trimmed.R1.fastq.gz \
-		out2="$sample".trimmed.R2.fastq.gz \
-		ziplevel=9 \
-		deleteinput=t
-	clumpify.sh reorder \
-		in="$sample".TRIM.unpaired.fastq.gz \
-		out="$sample".trimmed.unpaired.fastq.gz \
-		ziplevel=9 \
-		deleteinput=t
-
-	final_read1="$sample".trimmed.R1.fastq.gz
-	final_read2="$sample".trimmed.R2.fastq.gz
-	final_unpaired="$sample".trimmed.unpaired.fastq.gz
-	unpaired=1
+	final_read1=$(get_path "$sample".trimmed.R1.fastq.gz)
+	final_read2=$(get_path "$sample".trimmed.R2.fastq.gz)
+	if [[ -s "$sample".trimmed.unpaired.fastq.gz ]]; then
+		final_unpaired=$(get_path "$sample".trimmed.unpaired.fastq.gz)
+		unpaired=1
+	fi
 else
 	printf '\n%s\n\n' "[INFO]: Skipped trimming as specified."
 	final_read1="$read1_path"
 	final_read2="$read2_path"
+	if [[ $unpaired -eq 1 ]]; then
+		final_unpaired="$unpaired_path"
+	fi
 fi
 ##############################################################################################################################################################
 
