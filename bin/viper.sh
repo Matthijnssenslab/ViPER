@@ -465,8 +465,7 @@ printf '\n%s\n\n' "[INFO]: Starting ViPER! First step: trimming."
 mkdir -p "$outdir"
 cd "$outdir"
 
-if [[ $move -eq 0 && $skip_trimming -eq 1 && $contaminome_removal -eq 0 && $host_removal -eq 0 && $triple -eq 0 ]]; then
-else
+if [[ ! $move -eq 0 && $skip_trimming -eq 1 && $contaminome_removal -eq 0 && $host_removal -eq 0 && $triple -eq 0 ]]; then
 	mkdir -p READ
 fi
 
@@ -503,6 +502,7 @@ if [[ $skip_trimming -eq 0 ]]; then
 	fi
 
 	cat READ/TRIMMED/"$sample".R1.unpaired.fastq.gz READ/TRIMMED/"$sample".R2.unpaired.fastq.gz > READ/TRIMMED/"$sample".TRIM.unpaired.fastq.gz
+<<<<<<< HEAD
 
 	cd "$outdir"/READ/TRIMMED
 	rm "$sample".R1.unpaired.fastq.gz
@@ -522,6 +522,27 @@ if [[ $skip_trimming -eq 0 ]]; then
 		ziplevel=9 \
 		deleteinput=t
 
+=======
+
+	cd "$outdir"/READ/TRIMMED
+	rm "$sample".R1.unpaired.fastq.gz
+	rm "$sample".R2.unpaired.fastq.gz
+	
+	printf '\n%s\n\n' "[INFO]: Clumpifying trimmed reads for better compression."
+	clumpify.sh reorder \
+		in="$sample".TRIM.R1.fastq.gz \
+		in2="$sample".TRIM.R2.fastq.gz \
+		out="$sample".trimmed.R1.fastq.gz \
+		out2="$sample".trimmed.R2.fastq.gz \
+		ziplevel=9 \
+		deleteinput=t
+	clumpify.sh reorder \
+		in="$sample".TRIM.unpaired.fastq.gz \
+		out="$sample".trimmed.unpaired.fastq.gz \
+		ziplevel=9 \
+		deleteinput=t
+
+>>>>>>> 4af464b4e898d6496731b5a50e9b42baedfc5bc9
 	final_read1="$sample".trimmed.R1.fastq.gz
 	final_read2="$sample".trimmed.R2.fastq.gz
 	final_unpaired="$sample".trimmed.unpaired.fastq.gz
