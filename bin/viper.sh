@@ -492,8 +492,8 @@ if [[ $skip_trimming -eq 0 ]]; then
 
 ### Trimming
 
-	trimmomatic PE -threads "$threads" "$read1_path" "$read2_path" READ/TRIMMED/"$sample".TRIM.R1.fastq.gz READ/TRIMMED/"$sample".R1.unpaired.fastq.gz \
-	READ/TRIMMED/"$sample".TRIM.R2.fastq.gz READ/TRIMMED/"$sample".R2.unpaired.fastq.gz \
+	trimmomatic PE -threads "$threads" "$read1_path" "$read2_path" TRIMMED/"$sample".TRIM.R1.fastq.gz TRIMMED/"$sample".R1.unpaired.fastq.gz \
+	TRIMMED/"$sample".TRIM.R2.fastq.gz TRIMMED/"$sample".R2.unpaired.fastq.gz \
 	ILLUMINACLIP:"$trimmomatic_primer":2:30:10:1:true HEADCROP:19 LEADING:15 TRAILING:15 \
 	SLIDINGWINDOW:4:20 MINLEN:50 $crop
 
@@ -504,7 +504,7 @@ if [[ $skip_trimming -eq 0 ]]; then
 		exit 1
 	fi
 
-	cat READ/TRIMMED/"$sample".R1.unpaired.fastq.gz READ/TRIMMED/"$sample".R2.unpaired.fastq.gz > READ/TRIMMED/"$sample".TRIM.unpaired.fastq.gz
+	cat RTRIMMED/"$sample".R1.unpaired.fastq.gz TRIMMED/"$sample".R2.unpaired.fastq.gz > TRIMMED/"$sample".TRIM.unpaired.fastq.gz
 
 	cd "$outdir"/READ/TRIMMED
 	rm "$sample".R1.unpaired.fastq.gz
