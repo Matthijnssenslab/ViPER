@@ -504,7 +504,7 @@ if [[ $skip_trimming -eq 0 ]]; then
 		exit 1
 	fi
 
-	cat RTRIMMED/"$sample".R1.unpaired.fastq.gz TRIMMED/"$sample".R2.unpaired.fastq.gz > TRIMMED/"$sample".TRIM.unpaired.fastq.gz
+	cat TRIMMED/"$sample".R1.unpaired.fastq.gz TRIMMED/"$sample".R2.unpaired.fastq.gz > TRIMMED/"$sample".TRIM.unpaired.fastq.gz
 
 	cd "$outdir"/READ/TRIMMED
 	rm "$sample".R1.unpaired.fastq.gz
