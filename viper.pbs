@@ -18,5 +18,5 @@ source activate viper
 export PATH="$CONDA_PREFIX/bin:$PATH"
 
 #Run viper.sh script with desired options
-viper.sh -1 $line.R1.fastq.gz -2 $line.R2.fastq.gz -x 130 -p /staging/leuven/stg_00029/DB/trimmomatic/primer_WTA2_Nextera.fa -g /staging/leuven/stg_00029/mosquito_genome/combined_mg \
-	--triple-assembly -d ~/staging/DB/nr/latest/nr.dmnd -o $line -t 36
+viper.sh -1 $line.R1.fastq.gz -2 $line.R2.fastq.gz -x 130 -p /path/to/primer/file -g /path/to/host/genome \
+	--triple-assembly -d /path/to/diamond/database -o $line -t 36

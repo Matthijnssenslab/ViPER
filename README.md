@@ -61,12 +61,25 @@ viper.sh -1 read1.fastq(.gz) -2 read2.fastq(.gz)
 ```
 
 ## Command line options
+### Reads
+`-1 | --read1`
+	Path to the file with forward reads, may be gzipped.
+	
+`-2 | --read2`
+	Path to the file with reverse reads, may be gzipped.
+
+`-u | --unpaired`
+	File of unpaired reads if trimming was already performed beforehand (see --skip-trimming).
+
 ### Trimming
 `-x | --crop`
     Crops reads with Trimmomatic CROP to this final length. First 19 bases of each read are removed by default with HEADCROP. (default:'')
 
 `-p | --primer-file`
     Path to the primer file in fasta format with sequences that have to be trimmed by Trimmomatic, or a built-in option by Trimmomatic. (default: `$CONDA_PREFIX/share/trimmomatic/adapters/TruSeq3-PE.fa`)
+    
+`--skip-trimming`
+	Continue with given reads and do not trim the reads for quality and adapters with Trimmomatic. Useful when you already have trimmed your reads beforehand with other software for example.
 
 ### Contamination removal
 Optionally, the contaminome (reads mapping to sequenced negtve controls) and/or reads mapping to your host genome can be removed. Both these options require a bowtie2 index. 
@@ -123,6 +136,12 @@ To make use of the classification features of `viper.sh`, you have to provide a 
 
 `-t | --threads`
     Number of threads to use. (default: 4)
+    
+`-n | --name`
+	Prefix to the output files, default is to use the common prefix of the read files or the date + timestamp, if no common prefix is found. Special characters are not allowed.
+	
+`--keep-reads`
+	Do not move the read files to the output directory, but keep them in place.
 
 # Output
 ### `READ`
@@ -155,7 +174,7 @@ The scaffolds files from all three assemblies are copied to a `triple-assembly` 
 - <code><i>sample</i>_cluster_representatives.txt</code>
     File with only cluster representative names.
     
-Possibly, other files in this directory belong to the mapping of the reads to the scaffolds, e.g. the index files of bwa-mem2, the BAM and index file and <code><i>sample</i>.magnitudes</code> which contains the read count for each scaffold (or cluster representative). 
+Possibly, other files in this directory belong to the mapping of the reads to the scaffolds, e.g. the index files of bwa-mem2, the BAM and its index file and <code><i>sample</i>.magnitudes</code> which contains the read count for each scaffold (or cluster representative). 
     
 ### `DIAMOND`
 Contains standard DIAMOND output. 

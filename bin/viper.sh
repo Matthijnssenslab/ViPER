@@ -14,11 +14,15 @@ triple=0
 trimmomatic_primer="$CONDA_PREFIX/share/trimmomatic/adapters/TruSeq3-PE.fa"
 diamond_sensitivity="--sensitive"
 minlength=500
-cluster_cover=99
-cluster_identity=99
+cluster_cover=85
+cluster_identity=95
 blastn_pid=95
 crop=''
 spades_memory=''
+skip_trimming=0
+move=1
+read1_given=0
+read2_given=0
 
 ##### FUNCTIONS #####
 #Help function
@@ -37,10 +41,14 @@ REQUIRED:
    -2 | --read2			Path to the file with reverse reads, may be gzipped.
    
 OPTIONAL:
+ Reads:
+   -u | --unpaired		File of unpaired reads if trimming was already performed beforehand (see --skip-trimming).
+   
  Trimming:
    -x | --crop			Crops reads with Trimmomatic CROP to this final length. First 19 bases of each read are removed by default with HEADCROP. (default:'')
    -p | --primer-file		Path to the primer file in fasta format with sequences that have to be trimmed by Trimmomatic, or a built-in option by Trimmomatic. 
    				(default: \$CONDA_PREFIX/share/trimmomatic/adapters/TruSeq3-PE.fa)
+   --skip-trimming		Continue with given reads and do not trim the reads for quality and adapters with Trimmomatic. Useful when you already have trimmed your reads beforehand with other software for example.
 
  Contamination removal:
    -c | --contaminome		Path to a bowtie2 indexed contaminome.
@@ -51,18 +59,20 @@ OPTIONAL:
    -k | --spades-k-mer		List of k-mer sizes for SPAdes (must be odd and less than 128). (default: 21,33,55,77)
    --triple-assembly		Will perform three denovo assemblies with metaspades on the full reads, a 10% and 1% subset of the reads.
    				All assembled scaffolds will be concatenated and clustered together to remove redundancy (see also --cluster-cover/identity).
-   --cluster-cover		% of the shortest sequence that should be covered during clustering. (default: 99)
-   --cluster-identity		% of ANI for clustering scaffolds. (default: 99)
-   --memory-limit		Memory (in GB) to be reserved for SPAdes assembly. (default: 250)
+   --cluster-cover		% of the shortest sequence that should be covered during clustering. (default: 85)
+   --cluster-identity		% of ANI for clustering scaffolds. (default: 95)
+   --memory-limit		Memory (in GB) to be reserved for SPAdes assembly. (default: autodetected by SPAdes)
 
  Classification:
    -d | --diamond-path		Path to diamond database. If not given, Diamond and KronaTools will be skipped.
    -s | --sensitivity		Can be 'default', 'fast', 'mid', 'more', 'very' and 'ultra' (default corresponds to --sensitive setting of Diamond).
    
 GENERAL:
-   -o | --outdir		Path where results will be stored and read files will be copied to (default: current directory). 
-   -t | --threads		Number of threads to use. (default: 4)
    -h | --help    		Show this message and exit.
+   -o | --outdir		Path where results will be stored and read files will be copied to (default: current directory).
+   -n | --name			Prefix to the output files, default is to use the common prefix of the read files or the date + timestamp, if no common prefix is found. Special characters are not allowed.
+   -t | --threads		Number of threads to use. (default: 4)
+   --keep-reads			Do not move the read files to the output directory, but keep them in place.
 
 EOF
 }
@@ -84,7 +94,7 @@ echo "$file"
 
 #Find common prefix (and remove trailing dashes, dots, underscores and R)
 common_prefix() {
-printf '%s\n' "$1" "$2" | sed -e '1h;G;s,\(.*\).*\n\1.*,\1,;h;$!d' | sed -E -e 's/[-_\.]+R?$//g'
+printf '%s\n' "$1" "$2" | sed -e '1h;G;s,\(.*\).*\n\1.*,\1,;h;$!d' | sed -E -e 's/[-_\.]+R?[-_\.]*$//g'
 }
 
 #Check fasta file
@@ -107,6 +117,7 @@ fi
 while [ ! $# -eq 0 ]; do
     case "$1" in
         -1 | --read1)
+        	read1_given=1
         	if [[ -s "$2" ]]; then
         		read1_path=$(get_path "$2") 
         		shift
@@ -116,11 +127,22 @@ while [ ! $# -eq 0 ]; do
         	fi
         	;;
          -2 | --read2)
+         	read2_given=1
         	if [[ -s "$2" ]]; then
         		read2_path=$(get_path "$2")
         		shift
         	else
         		>&2 printf '\n%s\n\n' "[ERROR]: The given reverse read file does not exist or is empty."
+        		exit 1
+        	fi
+        	;;
+        -u | --unpaired)
+        	if [[ -s "$2" ]]; then
+        		unpaired_path=$(get_path "$2")
+        		unpaired=1
+        		shift
+        	else
+        		>&2 printf '\n%s\n\n' "[ERROR]: The given unpaired read file does not exist or is empty."
         		exit 1
         	fi
         	;;
@@ -178,6 +200,9 @@ while [ ! $# -eq 0 ]; do
         		>&2 printf '\n%s\n\n' "[ERROR]: The given minimum length is not an integer."
         		exit 1
         	fi
+        	;;
+        --skip-trimming)
+        	skip_trimming=1
         	;;
         -g | --host-genome)
         	if [[ "$2" != -* ]]; then
@@ -310,6 +335,18 @@ while [ ! $# -eq 0 ]; do
         		fi
         	fi
         	;;
+        -n | --name)
+        	if [[ "$2" == *['!'@#\$%^\&*()+]* ]]; then
+        		:
+        		shift
+        	else
+        		sample="$2"
+        		shift
+        	fi
+        	;;
+        --keep-reads)
+        	move=0
+        	;;
         -h | --help)
             usage
             exit
@@ -328,39 +365,71 @@ commands='seqkit samtools ktClassifyBLAST metaspades.py trimmomatic pigz bwa-mem
 for i in $commands; do
 	command -v $i &> /dev/null
 	if [[ ! $? -eq 0 ]]; then
-    printf '\n%s\n' "[ERROR]: "$i" could not be found, please install "$i" in PATH or activate your conda environment."
-    exit 1
+    	printf '\n%s\n' "[ERROR]: "$i" could not be found, please install "$i" in PATH or activate your conda environment."
+    	exit 1
 	fi
 done
 
 #Check if output directory already exists
-if [[ -d "$outdir"/READ ]]; then
+if [[ -d "$outdir"/ASSEMBLY ]]; then
 	>&2 printf '\n%s\n\n' "[ERROR]: The output directory already exists."
 	exit 1
 fi
 
 ### Check if all required options are given 
-
-if [[ -s "$read1_path" ]]; then
-	seqkit head "$read1_path" | seqkit stats | grep 'FASTQ' > /dev/null 2>&1
-	if [[ ! $? -eq 0 ]]; then
-		>&2 printf '\n%s\n\n' "[ERROR]: The provided file "$read1_path" is not a FASTQ file."
+if [[ $read1_given -eq 1 ]]; then
+	if [[ -s "$read1_path" ]]; then
+		seqkit head "$read1_path" | seqkit stats | grep 'FASTQ' > /dev/null 2>&1
+		if [[ ! $? -eq 0 ]]; then
+			>&2 printf '\n%s\n\n' "[ERROR]: The provided file "$read1_path" is not a FASTQ file."
+			exit 1
+		fi
+	else
+		>&2 printf '\n%s\n\n' "[ERROR]: The provided path "$read1_path" does not lead to a file."
 		exit 1
 	fi
 else
-	>&2 printf '\n%s\n\n' "[ERROR]: The provided path "$read1_path" does not lead to a file."
+	>&2 printf '\n%s\n\n' "[ERROR]: No forward reads given."
+	exit 1
 fi
 
-if [[ -s "$read2_path" ]]; then
-	seqkit head "$read2_path" | seqkit stats | grep 'FASTQ' > /dev/null 2>&1
-	if [[ ! $? -eq 0 ]]; then
-		>&2 printf '\n%s\n\n' "[ERROR]: The provided file "$read2_path" is not a FASTQ file."
+
+if [[ $read2_given -eq 1 ]]; then
+	if [[ -s "$read2_path" ]]; then
+		seqkit head "$read2_path" | seqkit stats | grep 'FASTQ' > /dev/null 2>&1
+		if [[ ! $? -eq 0 ]]; then
+			>&2 printf '\n%s\n\n' "[ERROR]: The provided file "$read2_path" is not a FASTQ file."
+			exit 1
+		fi
+	else
+		>&2 printf '\n%s\n\n' "[ERROR]: The provided path "$read2_path" does not lead to a file."
 		exit 1
 	fi
 else
-	>&2 printf '\n%s\n\n' "[ERROR]: The provided path "$read2_path" does not lead to a file."
+	>&2 printf '\n%s\n\n' "[ERROR]: No reverse reads given."
+	exit 1
 fi
 
+
+if [[ $unpaired -eq 1 ]]; then
+	if [[ $skip_trimming -eq 0 ]]; then
+		>&2 printf '\n%s\n\n' "[ERROR]: You have to skip trimming if you want to provide an unpaired read file."
+		exit 1
+	else
+		if [[ -s "$unpaired_path" ]]; then
+			seqkit head "$unpaired_path" | seqkit stats | grep 'FASTQ' > /dev/null 2>&1
+			if [[ ! $? -eq 0 ]]; then
+				>&2 printf '\n%s\n\n' "[ERROR]: The provided file "$unpaired_path" is not a FASTQ file."
+				exit 1
+			fi
+		else
+			>&2 printf '\n%s\n\n' "[ERROR]: The provided path "$unpaired_path" does not lead to a file."
+			exit 1
+		fi
+	fi
+fi
+
+### Check if contaminome removal is specified and a valid indexed contaminome is given
 
 if [[ $contaminome_removal -eq 1 ]]; then
 	if [[ -n "$contaminome" ]]; then
@@ -404,7 +473,7 @@ if [[ $host_removal -eq 1 ]]; then
 			>&2 printf '\n%s\n\n' "[ERROR]: The provided path does not lead to a valid bowtie2 indexed host genome."
 			exit 1
 		else 
-			printf '\n%s\n\n' "[INFO]: Removing reads that map to "$host_genome"."
+			printf '\n%s\n\n' "[INFO]: Removing reads that map to $host_genome."
 		fi
 	fi
 fi
@@ -412,70 +481,109 @@ fi
 # Extract file names
 read1=$(get_name "$read1_path")
 read2=$(get_name "$read2_path")
-sample=$(common_prefix "$read1" "$read2")
+if [[ $unpaired -eq 1 ]]; then
+	unpaired_name=$(get_name "$unpaired_path")
+fi
+
+if [[ -z "$sample" ]]; then
+	sample=$(common_prefix "$read1" "$read2")
+fi
 
 #Test if there is a common prefix
 if [[ -z "$sample" ]]; then
-      >&2 printf '\n%s\n\n' "[WARNING]: No common prefix found between reads, continuing with generic sample name but you might want to check if forward and reverse reads are from the same sample."
-      sample="sample"
+      >&2 printf '\n%s\n\n' "[WARNING]: No common prefix found between reads, continuing with date and timestamp as name. You might want to check if forward and reverse reads are from the same sample."
+      sample=$(date "+%Y%m%d-%H_%M_%S")
 fi
 
 ##### START PIPELINE #####
-### Move to wherever your files are
 printf '\n%s\n\n' "[INFO]: Starting ViPER! First step: trimming."
 
 mkdir -p "$outdir"
 cd "$outdir"
 
-mkdir -p READ
-mv  "$read1_path" "$read2_path" READ/
-cd READ/
-mkdir -p TRIMMED
+if [[ $move -eq 0 && $skip_trimming -eq 1 && $contaminome_removal -eq 0 && $host_removal -eq 0 && $triple -eq 0 ]]; then
+	:
+else
+	mkdir -p READ
+fi
+
+if [[ $move -eq 1 ]]; then
+	mv  "$read1_path" "$read2_path" READ/
+	if [[ $unpaired -eq 1 ]]; then
+		mv "$unpaired_path" READ/
+		final_unpaired=$(get_path READ/"$unpaired_name")
+	fi
+	read1_path=$(get_path READ/"$read1")
+	read2_path=$(get_path READ/"$read2")
+	printf '\n%s\n\n' "[INFO]: Moving reads to $(get_path ../READ)"
+	cd READ
+elif [[ $move -eq 0 && $skip_trimming -eq 1 && $contaminome_removal -eq 0 && $host_removal -eq 0 && $triple -eq 0 ]]; then
+	:
+else
+	cd READ
+fi
+
+if [[ $skip_trimming -eq 0 ]]; then
+	mkdir -p TRIMMED
 
 ### Trimming
 
-trimmomatic PE -threads "$threads" "$read1" "$read2" TRIMMED/"$sample".TRIM.R1.fastq.gz TRIMMED/"$sample".R1.unpaired.fastq.gz \
+	trimmomatic PE -threads "$threads" "$read1_path" "$read2_path" TRIMMED/"$sample".TRIM.R1.fastq.gz TRIMMED/"$sample".R1.unpaired.fastq.gz \
 	TRIMMED/"$sample".TRIM.R2.fastq.gz TRIMMED/"$sample".R2.unpaired.fastq.gz \
 	ILLUMINACLIP:"$trimmomatic_primer":2:30:10:1:true HEADCROP:19 LEADING:15 TRAILING:15 \
 	SLIDINGWINDOW:4:20 MINLEN:50 $crop
 
-if [[ $? -eq 0 ]]; then
-	printf '\n%s\n\n' "[INFO]: Trimmomatic completed succesfully!"
+	if [[ $? -eq 0 ]]; then
+		printf '\n%s\n\n' "[INFO]: Trimmomatic completed succesfully!"
+	else
+		>&2 printf '\n%s\n\n' "[ERROR]: Something went wrong during trimming."
+		exit 1
+	fi
+
+	cat TRIMMED/"$sample".R1.unpaired.fastq.gz TRIMMED/"$sample".R2.unpaired.fastq.gz > TRIMMED/"$sample".TRIM.unpaired.fastq.gz
+
+	cd "$outdir"/READ/TRIMMED
+	rm "$sample".R1.unpaired.fastq.gz
+	rm "$sample".R2.unpaired.fastq.gz
+
+	printf '\n%s\n\n' "[INFO]: Clumpifying trimmed reads for better compression."
+	clumpify.sh reorder \
+		in="$sample".TRIM.R1.fastq.gz \
+		in2="$sample".TRIM.R2.fastq.gz \
+		out="$sample".trimmed.R1.fastq.gz \
+		out2="$sample".trimmed.R2.fastq.gz \
+		ziplevel=9 \
+		deleteinput=t
+	clumpify.sh reorder \
+		in="$sample".TRIM.unpaired.fastq.gz \
+		out="$sample".trimmed.unpaired.fastq.gz \
+		ziplevel=9 \
+		deleteinput=t
+
+	final_read1=$(get_path "$sample".trimmed.R1.fastq.gz)
+	final_read2=$(get_path "$sample".trimmed.R2.fastq.gz)
+	if [[ -s "$sample".trimmed.unpaired.fastq.gz ]]; then
+		final_unpaired=$(get_path "$sample".trimmed.unpaired.fastq.gz)
+		unpaired=1
+	fi
 else
-	>&2 printf '\n%s\n\n' "[ERROR]: Something went wrong during trimming."
-	exit 1
+	printf '\n%s\n\n' "[INFO]: Skipped trimming as specified."
+	final_read1="$read1_path"
+	final_read2="$read2_path"
+	if [[ $unpaired -eq 1 ]]; then
+		final_unpaired="$unpaired_path"
+	fi
 fi
-
-cat TRIMMED/"$sample".R1.unpaired.fastq.gz TRIMMED/"$sample".R2.unpaired.fastq.gz > TRIMMED/"$sample".TRIM.unpaired.fastq.gz
-
-cd "$outdir"/READ/TRIMMED
-rm "$sample".R1.unpaired.fastq.gz
-rm "$sample".R2.unpaired.fastq.gz
-
-printf '\n%s\n\n' "[INFO]: Clumpifying trimmed reads for better compression."
-clumpify.sh reorder \
-	in="$sample".TRIM.R1.fastq.gz \
-	in2="$sample".TRIM.R2.fastq.gz \
-	out="$sample".trimmed.R1.fastq.gz \
-	out2="$sample".trimmed.R2.fastq.gz \
-	ziplevel=9 \
-	deleteinput=t
-clumpify.sh reorder \
-	in="$sample".TRIM.unpaired.fastq.gz \
-	out="$sample".trimmed.unpaired.fastq.gz \
-	ziplevel=9 \
-	deleteinput=t
-
 ##############################################################################################################################################################
 
 ### Removing the contaminome 
 #(you need to first make the de novo assembly of your negative controls and index it with bowtie2 to remove here)
-	
+
 if [[ $contaminome_removal -eq 1 ]]; then
 	printf '\n%s\n\n' "[INFO]: Removing contaminome."
 	# Paired
 	bowtie2 --very-sensitive -p "$threads" -x "$contaminome" \
-	-1 "$sample".trimmed.R1.fastq.gz -2 "$sample".trimmed.R2.fastq.gz -S mapunmap_pair.sam
+	-1 "$final_read1" -2 "$final_read2" -S mapunmap_pair.sam
 	if [[ ! $? -eq 0 ]]; then
 		>&2 printf '\n%s\n\n' "[ERROR]: Something went wrong during the contaminome removal of the paired reads."
 		exit 1 
@@ -488,28 +596,28 @@ if [[ $contaminome_removal -eq 1 ]]; then
 	pigz -9 NCout.R2.fastq
 	mv NCout.R1.fastq.gz "$sample".NCout.R1.fastq.gz
 	mv NCout.R2.fastq.gz "$sample".NCout.R2.fastq.gz
-
-	# Unpaired
-	bowtie2 --very-sensitive -p "$threads" -x "$contaminome" -U "$sample".trimmed.unpaired.fastq.gz -S mapunmap_unpair.sam
-	if [[ ! $? -eq 0 ]]; then
-		>&2 printf '\n%s\n\n' "[ERROR]: Something went wrong during the contaminome removal of the unpaired reads."
-		exit 1 
-	fi
-	samtools view -bS mapunmap_unpair.sam -@ "$threads" | samtools view -@ "$threads" -b -f4 -F256 - | samtools sort -n - -o UPunmapped.sorted.bam -@ "$threads"
-	samtools fastq UPunmapped.sorted.bam > NCout.unpaired.fastq
-	rm mapunmap_unpair.sam
-	rm UPunmapped.sorted.bam 
-	pigz -9 NCout.unpaired.fastq
-	mv NCout.unpaired.fastq.gz "$sample".NCout.unpaired.fastq.gz
-
+	
 	#Store names in variables
-	final_read1="$sample".NCout.R1.fastq.gz
-	final_read2="$sample".NCout.R2.fastq.gz
-	final_unpaired="$sample".NCout.unpaired.fastq.gz
-else
-	final_read1="$sample".trimmed.R1.fastq.gz
-	final_read2="$sample".trimmed.R2.fastq.gz
-	final_unpaired="$sample".trimmed.unpaired.fastq.gz
+	final_read1=$(get_path "$sample".NCout.R1.fastq.gz)
+	final_read2=$(get_path "$sample".NCout.R2.fastq.gz)
+
+	if [[ $unpaired -eq 1 ]]; then
+		# Unpaired
+		bowtie2 --very-sensitive -p "$threads" -x "$contaminome" -U "$final_unpaired" -S mapunmap_unpair.sam
+		if [[ ! $? -eq 0 ]]; then
+			>&2 printf '\n%s\n\n' "[ERROR]: Something went wrong during the contaminome removal of the unpaired reads."
+			exit 1 
+		fi
+		samtools view -bS mapunmap_unpair.sam -@ "$threads" | samtools view -@ "$threads" -b -f4 -F256 - | samtools sort -n - -o UPunmapped.sorted.bam -@ "$threads"
+		samtools fastq UPunmapped.sorted.bam > NCout.unpaired.fastq
+		rm mapunmap_unpair.sam
+		rm UPunmapped.sorted.bam 
+		pigz -9 NCout.unpaired.fastq
+		mv NCout.unpaired.fastq.gz "$sample".NCout.unpaired.fastq.gz
+		
+		#Store names in variables
+		final_unpaired=$(get_path "$sample".NCout.unpaired.fastq.gz)
+	fi
 fi
 
 ##############################################################################################################################################################
@@ -532,24 +640,28 @@ if [[ $host_removal -eq 1 ]]; then
 	pigz -9 Hostout.R2.fastq
 	mv Hostout.R1.fastq.gz "$sample".Hostout.R1.fastq.gz
 	mv Hostout.R2.fastq.gz "$sample".Hostout.R2.fastq.gz
-
-	# Unpaired
-	bowtie2 --very-sensitive -p "$threads" -x "$host_genome" -U "$final_unpaired" -S mapunmap_unpair.sam
-	if [[ ! $? -eq 0 ]]; then
-		>&2 printf '\n%s\n\n' "[ERROR]: Something went wrong during the host genome removal of the unpaired reads."
-		exit 1 
-	fi
-	samtools view -bS mapunmap_unpair.sam -@ "$threads" | samtools view -@ "$threads" -b -f4 -F256 - | samtools sort -n - -o UPunmapped.sorted.bam -@ "$threads"
-	samtools fastq UPunmapped.sorted.bam > Hostout.unpaired.fastq -@ "$threads"
-	rm mapunmap_unpair.sam
-	rm UPunmapped.sorted.bam
-	pigz -9 Hostout.unpaired.fastq
-	mv Hostout.unpaired.fastq.gz "$sample".Hostout.unpaired.fastq.gz
 	
 	#Store names in variables
-	final_read1="$sample".Hostout.R1.fastq.gz
-	final_read2="$sample".Hostout.R2.fastq.gz
-	final_unpaired="$sample".Hostout.unpaired.fastq.gz
+	final_read1=$(get_path "$sample".Hostout.R1.fastq.gz)
+	final_read2=$(get_path "$sample".Hostout.R2.fastq.gz)
+
+	if [[ $unpaired -eq 1 ]]; then
+		# Unpaired
+		bowtie2 --very-sensitive -p "$threads" -x "$host_genome" -U "$final_unpaired" -S mapunmap_unpair.sam
+		if [[ ! $? -eq 0 ]]; then
+			>&2 printf '\n%s\n\n' "[ERROR]: Something went wrong during the host genome removal of the unpaired reads."
+			exit 1 
+		fi
+		samtools view -bS mapunmap_unpair.sam -@ "$threads" | samtools view -@ "$threads" -b -f4 -F256 - | samtools sort -n - -o UPunmapped.sorted.bam -@ "$threads"
+		samtools fastq UPunmapped.sorted.bam > Hostout.unpaired.fastq -@ "$threads"
+		rm mapunmap_unpair.sam
+		rm UPunmapped.sorted.bam
+		pigz -9 Hostout.unpaired.fastq
+		mv Hostout.unpaired.fastq.gz "$sample".Hostout.unpaired.fastq.gz
+		
+		#Store names in variables
+		final_unpaired=$(get_path "$sample".Hostout.unpaired.fastq.gz)
+	fi
 fi
 
 ##############################################################################################################################################################
@@ -557,7 +669,11 @@ fi
 ### QC of reads
 printf '\n%s\n\n' "[INFO]: Checking read quality with fastqc."
 mkdir -p "$outdir"/QC/FASTQC
-fastqc -o "$outdir"/QC/FASTQC -t "$threads" -q "$final_read1" "$final_read2" "$final_unpaired"
+if [[ $unpaired -eq 1 ]]; then
+	fastqc -o "$outdir"/QC/FASTQC -t "$threads" -q "$final_read1" "$final_read2" "$final_unpaired"
+else
+	fastqc -o "$outdir"/QC/FASTQC -t "$threads" -q "$final_read1" "$final_read2"
+fi
 
 # After all samples are done you can run multiqc to output the QC of all samples in 1 file
 #multiqc -o QC .
@@ -578,10 +694,10 @@ if [[ $triple -eq 1 ]]; then
 		out1="$sample".subset_1.R1.fastq.gz out2="$sample".subset_1.R2.fastq.gz \
 		samplerate=0.01 sampleseed=1234
 
-	subset10_R1="$sample".subset_10.R1.fastq.gz
-	subset10_R2="$sample".subset_10.R2.fastq.gz
-	subset1_R1="$sample".subset_1.R1.fastq.gz
-	subset1_R2="$sample".subset_1.R2.fastq.gz
+	subset10_R1=$(get_path "$sample".subset_10.R1.fastq.gz)
+	subset10_R2=$(get_path "$sample".subset_10.R2.fastq.gz)
+	subset1_R1=$(get_path "$sample".subset_1.R1.fastq.gz)
+	subset1_R2=$(get_path "$sample".subset_1.R2.fastq.gz)
 fi
 	
 ##############################################################################################################################################################
@@ -592,8 +708,15 @@ if [[ $triple -eq 1 ]]; then
 	# Full assembly
 	mkdir -p "$outdir"/ASSEMBLY
 	cd "$outdir"/ASSEMBLY
-	metaspades.py -1 "$outdir"/READ/TRIMMED/"$final_read1" -2 "$outdir"/READ/TRIMMED/"$final_read2" \
-	-s "$outdir"/READ/TRIMMED/"$final_unpaired" -t "$threads" -k "$spades_k_mer" -o ASSEMBLY1 $spades_memory
+	
+	if [[ $unpaired -eq 1 ]]; then
+		metaspades.py -1 "$final_read1" -2 "$final_read2" \
+		-s "$final_unpaired" -t "$threads" -k "$spades_k_mer" -o ASSEMBLY1 $spades_memory
+	else
+		metaspades.py -1 "$final_read1" -2 "$final_read2" \
+		-t "$threads" -k "$spades_k_mer" -o ASSEMBLY1 $spades_memory
+	fi
+	
 	cd ASSEMBLY1
 	mv scaffolds.fasta "$sample".full.scaffolds.fasta
 	#to add the sample names to your assemblies
@@ -602,7 +725,7 @@ if [[ $triple -eq 1 ]]; then
 
 	# 10% assembly
 	cd "$outdir"/ASSEMBLY
-	metaspades.py -1 "$outdir"/READ/TRIMMED/"$subset10_R1" -2 "$outdir"/READ/TRIMMED/"$subset10_R2" \
+	metaspades.py -1 "$subset10_R1" -2 "$subset10_R2" \
 	-t "$threads" -k "$spades_k_mer" -o ASSEMBLY2 $spades_memory
 	cd ASSEMBLY2
 	mv scaffolds.fasta $"$sample".10-percent.scaffolds.fasta
@@ -612,7 +735,7 @@ if [[ $triple -eq 1 ]]; then
 
 	# 1% assembly
 	cd "$outdir"/ASSEMBLY
-	metaspades.py -1 "$outdir"/READ/TRIMMED/"$subset1_R1" -2 "$outdir"/READ/TRIMMED/"$subset1_R2" \
+	metaspades.py -1 "$subset1_R1" -2 "$subset1_R2" \
 	-t "$threads" -k "$spades_k_mer" -o ASSEMBLY3 $spades_memory
 	cd ASSEMBLY3
 	mv scaffolds.fasta "$sample".1-percent.scaffolds.fasta
@@ -622,8 +745,13 @@ if [[ $triple -eq 1 ]]; then
 else
 	printf '\n%s\n\n' "[INFO]: Starting assembly with metaSPAdes."
 	cd "$outdir"
-	metaspades.py -1 "$outdir"/READ/TRIMMED/"$final_read1" -2 "$outdir"/READ/TRIMMED/"$final_read2" \
-	-s "$outdir"/READ/TRIMMED/"$final_unpaired" -t "$threads" -k "$spades_k_mer" -o ASSEMBLY $spades_memory
+	if [[ $unpaired -eq 1 ]]; then
+		metaspades.py -1 "$final_read1" -2 "$final_read2" \
+		-s "$final_unpaired" -t "$threads" -k "$spades_k_mer" -o ASSEMBLY $spades_memory
+	else
+		metaspades.py -1 "$final_read1" -2 "$final_read2" \
+		-t "$threads" -k "$spades_k_mer" -o ASSEMBLY $spades_memory
+	fi
 	cd ASSEMBLY
 	mv scaffolds.fasta "$sample".scaffolds.fasta
 	#to add the sample names to your assemblies
@@ -663,12 +791,6 @@ if [[ $triple -eq 1 ]]; then
 	cut -f1 "$sample"_"$minlength"_clusters.tsv > "$sample"_cluster_representatives.txt
 	seqkit grep -j "$threads" -f "$sample"_cluster_representatives.txt -n -o "$sample"_"$minlength".scaffolds.fasta "$sample"_"$minlength"-unclustered.scaffolds.fasta
 	seqkit sort --by-length --reverse -o "$sample"_"$minlength".scaffolds.fasta "$sample"_"$minlength".scaffolds.fasta
-	#if [[ -s "$sample"_"$minlength".scaffolds_"$cluster_identity"-"$cluster_cover".fna ]]; then
-	#	mv "$sample"_"$minlength".scaffolds.fasta "$sample"_"$minlength"-unclustered.scaffolds.fasta
-	#	mv "$sample"_"$minlength".scaffolds_"$cluster_identity"-"$cluster_cover".fna "$sample"_"$minlength".scaffolds.fasta
-	#else
-	#	printf '\n%s\n\n' "[WARNING]: No scaffolds could be clustered together at "$cluster_identity"% identity over "$cluster_cover"% of the length."
-	#fi
 else
 	cp ASSEMBLY/"$sample".scaffolds.fasta SCAFFOLDS/
 	cd SCAFFOLDS/
@@ -710,11 +832,17 @@ if [[ $diamond -eq 1 ]]; then
 	cd "$outdir"/SCAFFOLDS
 
 	bwa-mem2 index "$scaffolds"
-	bwa-mem2 mem "$scaffolds" "$outdir"/READ/TRIMMED/"$final_read1" "$outdir"/READ/TRIMMED/"$final_read2" -t "$threads" | samtools view -Su - | samtools sort - -o "$sample".R.sort.bam
-	bwa-mem2 mem "$scaffolds" "$outdir"/READ/TRIMMED/"$final_unpaired" -t "$threads" | samtools view -Su - | samtools sort - -o "$sample".un.sort.bam
-	samtools merge -f "$sample".bam "$sample".R.sort.bam "$sample".un.sort.bam
-	rm "$sample".R.sort.bam
-	rm "$sample".un.sort.bam
+	bwa-mem2 mem "$scaffolds" "$final_read1" "$final_read2" -t "$threads" | samtools view -Su - | samtools sort - -o "$sample".R.sort.bam
+
+	if [[ $unpaired -eq 1 ]]; then
+		bwa-mem2 mem "$scaffolds" "$final_unpaired" -t "$threads" | samtools view -Su - | samtools sort - -o "$sample".un.sort.bam
+		samtools merge -f "$sample".bam "$sample".R.sort.bam "$sample".un.sort.bam
+		rm "$sample".R.sort.bam
+		rm "$sample".un.sort.bam
+	else
+		mv "$sample".R.sort.bam "$sample".bam
+	fi
+	
 	samtools index "$sample".bam
 	samtools idxstats "$sample".bam | cut -f1,3 > "$sample".magnitudes
 
