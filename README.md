@@ -174,7 +174,7 @@ The scaffolds files from all three assemblies are copied to a `triple-assembly` 
 - <code><i>sample</i>_cluster_representatives.txt</code>
     File with only cluster representative names.
     
-Possibly, other files in this directory belong to the mapping of the reads to the scaffolds, e.g. the index files of bwa-mem2, the BAM and index file and <code><i>sample</i>.magnitudes</code> which contains the read count for each scaffold (or cluster representative). 
+Possibly, other files in this directory belong to the mapping of the reads to the scaffolds, e.g. the index files of bwa-mem2, the BAM and its index file and <code><i>sample</i>.magnitudes</code> which contains the read count for each scaffold (or cluster representative). 
     
 ### `DIAMOND`
 Contains standard DIAMOND output. 
