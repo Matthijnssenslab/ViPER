@@ -70,7 +70,7 @@ OPTIONAL:
 GENERAL:
    -h | --help    		Show this message and exit.
    -o | --outdir		Path where results will be stored and read files will be copied to (default: current directory).
-   -n | --name			Prefix to to output files, default is to use the common prefix of the read files or the date + timestamp, if no common prefix is found.
+   -n | --name			Prefix to the output files, default is to use the common prefix of the read files or the date + timestamp, if no common prefix is found.
    -t | --threads		Number of threads to use. (default: 4)
    --keep-reads			Do not move the read files to the output directory, but keep them in place.
 
