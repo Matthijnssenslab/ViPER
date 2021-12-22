@@ -68,7 +68,8 @@ OPTIONAL:
    -s | --sensitivity		Can be 'default', 'fast', 'mid', 'more', 'very' and 'ultra' (default corresponds to --sensitive setting of Diamond).
    
 GENERAL:
-   -o | --outdir		Path where results will be stored and read files will be copied to (default: current directory). 
+   -o | --outdir		Path where results will be stored and read files will be copied to (default: current directory).
+   -n | --name			Prefix to to output files, default is to use the common prefix of the read files or the date + timestamp, if no common prefix is found.
    -t | --threads		Number of threads to use. (default: 4)
    -h | --help    		Show this message and exit.
    --keep-reads			Do not move the read files to the output directory, but keep them in place.
@@ -334,13 +335,22 @@ while [ ! $# -eq 0 ]; do
         		fi
         	fi
         	;;
+        -n | --name)
+        	if [[ "$2" == *['!'@#\$%^\&*()+]* ]]; then
+        		:
+        		shift
+        	else
+        		sample="$2"
+        		shift
+        	fi
+        	;;
+        --keep-reads)
+        	move=0
+        	;;
         -h | --help)
             usage
             exit
             ;;
-        --keep-reads)
-        	move=0
-        	;;
         *)
             >&2 printf '\n%s\n\n' "[ERROR]: unrecognized option $1."
             usage
@@ -474,12 +484,15 @@ read2=$(get_name "$read2_path")
 if [[ $unpaired -eq 1 ]]; then
 	unpaired_name=$(get_name "$unpaired_path")
 fi
-sample=$(common_prefix "$read1" "$read2")
+
+if [[ -z "$sample" ]]; then
+	sample=$(common_prefix "$read1" "$read2")
+fi
 
 #Test if there is a common prefix
 if [[ -z "$sample" ]]; then
-      >&2 printf '\n%s\n\n' "[WARNING]: No common prefix found between reads, continuing with generic sample name but you might want to check if forward and reverse reads are from the same sample."
-      sample="sample"
+      >&2 printf '\n%s\n\n' "[WARNING]: No common prefix found between reads, continuing with date and timestamp as name. You might want to check if forward and reverse reads are from the same sample."
+      sample=$(date "+%Y%m%d-%H_%M_%S")
 fi
 
 ##### START PIPELINE #####
@@ -489,7 +502,7 @@ mkdir -p "$outdir"
 cd "$outdir"
 
 if [[ $move -eq 0 && $skip_trimming -eq 1 && $contaminome_removal -eq 0 && $host_removal -eq 0 && $triple -eq 0 ]]; then
-	printf ''
+	:
 else
 	mkdir -p READ
 fi
@@ -505,7 +518,7 @@ if [[ $move -eq 1 ]]; then
 	printf '\n%s\n\n' "[INFO]: Moving reads to $(get_path ../READ)"
 	cd READ
 elif [[ $move -eq 0 && $skip_trimming -eq 1 && $contaminome_removal -eq 0 && $host_removal -eq 0 && $triple -eq 0 ]]; then
-	printf ''
+	:
 else
 	cd READ
 fi
