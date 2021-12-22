@@ -138,7 +138,7 @@ To make use of the classification features of `viper.sh`, you have to provide a 
     Number of threads to use. (default: 4)
     
 `-n | --name`
-	Prefix to the output files, default is to use the common prefix of the read files or the date + timestamp, if no common prefix is found.
+	Prefix to the output files, default is to use the common prefix of the read files or the date + timestamp, if no common prefix is found. Special characters are not allowed.
 	
 `--keep-reads`
 	Do not move the read files to the output directory, but keep them in place.
