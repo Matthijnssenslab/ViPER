@@ -21,6 +21,8 @@ crop=''
 spades_memory=''
 skip_trimming=0
 move=1
+read1_given=0
+read2_given=0
 
 ##### FUNCTIONS #####
 #Help function
@@ -114,6 +116,7 @@ fi
 while [ ! $# -eq 0 ]; do
     case "$1" in
         -1 | --read1)
+        	read1_given=1
         	if [[ -s "$2" ]]; then
         		read1_path=$(get_path "$2") 
         		shift
@@ -123,6 +126,7 @@ while [ ! $# -eq 0 ]; do
         	fi
         	;;
          -2 | --read2)
+         	read2_given=1
         	if [[ -s "$2" ]]; then
         		read2_path=$(get_path "$2")
         		shift
@@ -351,8 +355,8 @@ commands='seqkit samtools ktClassifyBLAST metaspades.py trimmomatic pigz bwa-mem
 for i in $commands; do
 	command -v $i &> /dev/null
 	if [[ ! $? -eq 0 ]]; then
-    printf '\n%s\n' "[ERROR]: "$i" could not be found, please install "$i" in PATH or activate your conda environment."
-    exit 1
+    	printf '\n%s\n' "[ERROR]: "$i" could not be found, please install "$i" in PATH or activate your conda environment."
+    	exit 1
 	fi
 done
 
@@ -363,26 +367,39 @@ if [[ -d "$outdir"/ASSEMBLY ]]; then
 fi
 
 ### Check if all required options are given 
-
-if [[ -s "$read1_path" ]]; then
-	seqkit head "$read1_path" | seqkit stats | grep 'FASTQ' > /dev/null 2>&1
-	if [[ ! $? -eq 0 ]]; then
-		>&2 printf '\n%s\n\n' "[ERROR]: The provided file "$read1_path" is not a FASTQ file."
+if [[ $read1_given -eq 1 ]]; then
+	if [[ -s "$read1_path" ]]; then
+		seqkit head "$read1_path" | seqkit stats | grep 'FASTQ' > /dev/null 2>&1
+		if [[ ! $? -eq 0 ]]; then
+			>&2 printf '\n%s\n\n' "[ERROR]: The provided file "$read1_path" is not a FASTQ file."
+			exit 1
+		fi
+	else
+		>&2 printf '\n%s\n\n' "[ERROR]: The provided path "$read1_path" does not lead to a file."
 		exit 1
 	fi
 else
-	>&2 printf '\n%s\n\n' "[ERROR]: The provided path "$read1_path" does not lead to a file."
+	>&2 printf '\n%s\n\n' "[ERROR]: No forward reads given."
+	exit 1
 fi
 
-if [[ -s "$read2_path" ]]; then
-	seqkit head "$read2_path" | seqkit stats | grep 'FASTQ' > /dev/null 2>&1
-	if [[ ! $? -eq 0 ]]; then
-		>&2 printf '\n%s\n\n' "[ERROR]: The provided file "$read2_path" is not a FASTQ file."
+
+if [[ $read2_given -eq 1 ]]; then
+	if [[ -s "$read2_path" ]]; then
+		seqkit head "$read2_path" | seqkit stats | grep 'FASTQ' > /dev/null 2>&1
+		if [[ ! $? -eq 0 ]]; then
+			>&2 printf '\n%s\n\n' "[ERROR]: The provided file "$read2_path" is not a FASTQ file."
+			exit 1
+		fi
+	else
+		>&2 printf '\n%s\n\n' "[ERROR]: The provided path "$read2_path" does not lead to a file."
 		exit 1
 	fi
 else
-	>&2 printf '\n%s\n\n' "[ERROR]: The provided path "$read2_path" does not lead to a file."
+	>&2 printf '\n%s\n\n' "[ERROR]: No reverse reads given."
+	exit 1
 fi
+
 
 if [[ $unpaired -eq 1 ]]; then
 	if [[ $skip_trimming -eq 0 ]]; then
@@ -397,6 +414,7 @@ if [[ $unpaired -eq 1 ]]; then
 			fi
 		else
 			>&2 printf '\n%s\n\n' "[ERROR]: The provided path "$unpaired_path" does not lead to a file."
+			exit 1
 		fi
 	fi
 fi
