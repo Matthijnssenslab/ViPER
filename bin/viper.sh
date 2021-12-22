@@ -23,6 +23,7 @@ skip_trimming=0
 move=1
 read1_given=0
 read2_given=0
+sample=''
 
 ##### FUNCTIONS #####
 #Help function
