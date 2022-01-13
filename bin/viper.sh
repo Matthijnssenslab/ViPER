@@ -23,6 +23,7 @@ skip_trimming=0
 move=1
 read1_given=0
 read2_given=0
+unpaired=0
 sample=''
 
 ##### FUNCTIONS #####
@@ -512,7 +513,7 @@ if [[ $move -eq 1 ]]; then
 	mv  "$read1_path" "$read2_path" READ/
 	if [[ $unpaired -eq 1 ]]; then
 		mv "$unpaired_path" READ/
-		final_unpaired=$(get_path READ/"$unpaired_name")
+		unpaired_path=$(get_path READ/"$unpaired_name")
 	fi
 	read1_path=$(get_path READ/"$read1")
 	read2_path=$(get_path READ/"$read2")
