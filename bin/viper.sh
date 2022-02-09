@@ -11,7 +11,7 @@ host_removal=0
 host_genome=''
 contaminome_removal=0
 triple=0
-trimmomatic_primer="$CONDA_PREFIX/share/trimmomatic/adapters/TruSeq3-PE.fa"
+trimmomatic_primer="$CONDA_PREFIX/share/trimmomatic/adapters/NexteraPE-PE.fa"
 diamond_sensitivity="--sensitive"
 minlength=500
 cluster_cover=85
@@ -49,7 +49,7 @@ OPTIONAL:
  Trimming:
    -x | --crop			Crops reads with Trimmomatic CROP to this final length. First 19 bases of each read are removed by default with HEADCROP. (default:'')
    -p | --primer-file		Path to the primer file in fasta format with sequences that have to be trimmed by Trimmomatic, or a built-in option by Trimmomatic. 
-   				(default: \$CONDA_PREFIX/share/trimmomatic/adapters/TruSeq3-PE.fa)
+   				(default: \$CONDA_PREFIX/share/trimmomatic/adapters/NexteraPE-PE.fa)
    --skip-trimming		Continue with given reads and do not trim the reads for quality and adapters with Trimmomatic. Useful when you already have trimmed your reads beforehand with other software for example.
 
  Contamination removal:

@@ -76,7 +76,7 @@ viper.sh -1 read1.fastq(.gz) -2 read2.fastq(.gz)
     Crops reads with Trimmomatic CROP to this final length. First 19 bases of each read are removed by default with HEADCROP. (default:'')
 
 `-p | --primer-file`
-    Path to the primer file in fasta format with sequences that have to be trimmed by Trimmomatic, or a built-in option by Trimmomatic. (default: `$CONDA_PREFIX/share/trimmomatic/adapters/TruSeq3-PE.fa`)
+    Path to the primer file in fasta format with sequences that have to be trimmed by Trimmomatic, or a built-in option by Trimmomatic. (default: `$CONDA_PREFIX/share/trimmomatic/adapters/NexteraPE-PE.fa`)
     
 `--skip-trimming`
 	Continue with given reads and do not trim the reads for quality and adapters with Trimmomatic. Useful when you already have trimmed your reads beforehand with other software for example.
