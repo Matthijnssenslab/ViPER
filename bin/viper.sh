@@ -52,7 +52,7 @@ OPTIONAL:
    -p | --primer-file		Path to the primer file in fasta format with sequences that have to be trimmed by Trimmomatic, or a built-in option by Trimmomatic. 
    				(default: \$CONDA_PREFIX/share/trimmomatic/adapters/NexteraPE-PE.fa)
    --illuminaclip		ILLUMINACLIP options for Trimmomatic (apart from primer file). Has to be strictly in following layout with each value separated by a colon (:).
-   						<seed mismatches>:<palindrome clip threshold>:<simple clip threshold>:<minAdapterLength>:<keepBothReads> (default: 2:30:10:1:true)		
+   				<seed mismatches>:<palindrome clip threshold>:<simple clip threshold>:<minAdapterLength>:<keepBothReads> (default: 2:30:10:1:true)		
    --skip-trimming		Continue with given reads and do not trim the reads for quality and adapters with Trimmomatic. Useful when you already have trimmed your reads beforehand with other software for example.
 
  Contamination removal:
@@ -186,6 +186,7 @@ while [ ! $# -eq 0 ]; do
         	;;
         --illuminaclip)
         	illuminaclip="$2"
+        	;;
     # Contamination removal
         -c | --contaminome)
             if [[ "$2" != -* ]]; then
