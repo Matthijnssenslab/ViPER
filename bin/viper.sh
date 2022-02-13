@@ -186,6 +186,7 @@ while [ ! $# -eq 0 ]; do
         	;;
         --illuminaclip)
         	illuminaclip="$2"
+        	shift
         	;;
     # Contamination removal
         -c | --contaminome)
