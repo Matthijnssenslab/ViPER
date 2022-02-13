@@ -25,6 +25,7 @@ read1_given=0
 read2_given=0
 unpaired=0
 sample=''
+illuminaclip="2:30:10:1:true"
 
 ##### FUNCTIONS #####
 #Help function
@@ -50,6 +51,8 @@ OPTIONAL:
    -x | --crop			Crops reads with Trimmomatic CROP to this final length. First 19 bases of each read are removed by default with HEADCROP. (default:'')
    -p | --primer-file		Path to the primer file in fasta format with sequences that have to be trimmed by Trimmomatic, or a built-in option by Trimmomatic. 
    				(default: \$CONDA_PREFIX/share/trimmomatic/adapters/NexteraPE-PE.fa)
+   --illuminaclip		ILLUMINACLIP options for Trimmomatic (apart from primer file). Has to be strictly in following layout with each value separated by a colon (:).
+   						<seed mismatches>:<palindrome clip threshold>:<simple clip threshold>:<minAdapterLength>:<keepBothReads> (default: 2:30:10:1:true)		
    --skip-trimming		Continue with given reads and do not trim the reads for quality and adapters with Trimmomatic. Useful when you already have trimmed your reads beforehand with other software for example.
 
  Contamination removal:
@@ -79,6 +82,7 @@ GENERAL:
 EOF
 }
 
+#return function
 retfunc() {
 return "$1"
 }
@@ -118,6 +122,7 @@ fi
 
 while [ ! $# -eq 0 ]; do
     case "$1" in
+    # Reads
         -1 | --read1)
         	read1_given=1
         	if [[ -s "$2" ]]; then
@@ -148,49 +153,7 @@ while [ ! $# -eq 0 ]; do
         		exit 1
         	fi
         	;;
-        -o | --outdir)
-            if [[ "$2" != -* ]]; then
-            	outdir=$(get_path "$2")
-            	shift
-            else
-            	>&2 printf '\n%s\n\n' "[ERROR]: You did not specify an output directory."
-            	exit 1
-            fi
-            ;;
-        -c | --contaminome)
-            if [[ "$2" != -* ]]; then
-            	contaminome_removal=1
-                contaminome=$(get_path "$2")
-                shift
-            else
-    			>&2 printf '\n%s\n\n' "[ERROR]: '-c | --contaminome' requires a bowtie2 indexed contaminome."
-                exit 1
-            fi
-            ;;
-        -m | --min-length)
-        	if [[ "$2" =~ ^[0-9]+$ ]]; then
-        		minlength=$2
-        		shift
-        	elif [[ "$2" == -* ]]; then
-        		>&2 printf '\n%s\n\n' "[ERROR]: Give a minimum length for assembled scaffolds."
-        		exit 1
-        	else
-        		>&2 printf '\n%s\n\n' "[ERROR]: The given minimum length is not an integer."
-        		exit 1
-        	fi
-        	;;
-        --memory-limit)
-        	if [[ "$2" =~ ^[0-9]+$ ]]; then
-        		spades_memory="-m $2"
-        		shift
-        	elif [[ "$2" == -* ]]; then
-        		>&2 printf '\n%s\n\n' "[ERROR]: Give a RAM limit for SPAdes assembly."
-        		exit 1
-        	else
-        		>&2 printf '\n%s\n\n' "[ERROR]: The given RAM limit is not an integer."
-        		exit 1
-        	fi
-        	;;
+    # Trimming
         -x | --crop)
         	if [[ "$2" =~ ^[0-9]+$ ]]; then
         		crop="CROP:$2"
@@ -203,9 +166,37 @@ while [ ! $# -eq 0 ]; do
         		exit 1
         	fi
         	;;
+        -p | --primer-file)
+        	if [[ "$2" != -* ]]; then
+        		check_fasta "$2"
+        		if [[ $? -eq 0 ]]; then
+                	trimmomatic_primer=$(get_path "$2")
+                	shift
+                else
+                	>&2 printf '\n%s\n\n' "[ERROR]: The given primer file is not a valid fasta."
+                	exit 1
+                fi
+            else
+    			>&2 printf '\n%s\n\n' "[ERROR]: '--trimmomatic' requires a primer file in fasta format."
+                exit 1
+            fi
+            ;;
         --skip-trimming)
         	skip_trimming=1
         	;;
+        --illuminaclip)
+        	illuminaclip="$2"
+    # Contamination removal
+        -c | --contaminome)
+            if [[ "$2" != -* ]]; then
+            	contaminome_removal=1
+                contaminome=$(get_path "$2")
+                shift
+            else
+    			>&2 printf '\n%s\n\n' "[ERROR]: '-c | --contaminome' requires a bowtie2 indexed contaminome."
+                exit 1
+            fi
+            ;;
         -g | --host-genome)
         	if [[ "$2" != -* ]]; then
         		host_removal=1
@@ -216,6 +207,19 @@ while [ ! $# -eq 0 ]; do
                 exit 1
             fi
             ;;
+    # Assembly
+        -m | --min-length)
+        	if [[ "$2" =~ ^[0-9]+$ ]]; then
+        		minlength=$2
+        		shift
+        	elif [[ "$2" == -* ]]; then
+        		>&2 printf '\n%s\n\n' "[ERROR]: Give a minimum length for assembled scaffolds."
+        		exit 1
+        	else
+        		>&2 printf '\n%s\n\n' "[ERROR]: The given minimum length is not an integer."
+        		exit 1
+        	fi
+        	;;
         -k | --spades-k-mer)
         	echo "$2" | \
 				while read -d, i || [[ -n $i ]]; do 
@@ -238,63 +242,9 @@ while [ ! $# -eq 0 ]; do
         		exit 1
         	fi
         	;;
-        -d | --diamond-path)
-        	if [[ -s "$2" ]]; then
-        		diamond=1
-            	diamond_path=$(get_path "$2")
-            	shift
-            else
-            	>&2 printf '\n%s\n\n' "[ERROR]: The provided diamond database does not exist."
-            	exit 1
-            fi
-        	;;
         --triple-assembly)
         	triple=1
         	;;
-        -p | --primer-file)
-        	if [[ "$2" != -* ]]; then
-        		check_fasta "$2"
-        		if [[ $? -eq 0 ]]; then
-                	trimmomatic_primer=$(get_path "$2")
-                	shift
-                else
-                	>&2 printf '\n%s\n\n' "[ERROR]: The given primer file is not a valid fasta."
-                	exit 1
-                fi
-            else
-    			>&2 printf '\n%s\n\n' "[ERROR]: '--trimmomatic' requires a primer file in fasta format."
-                exit 1
-            fi
-            ;;
-        -s | --sensitivity)
-        	if [[ "$2" != -* ]]; then
-        		if [[ "$2" == "default" ]]; then
-        			diamond_sensitivity="--sensitive"
-        			shift
-        		elif [[ "$2" == "mid" ]]; then
-        			diamond_sensitivity="--mid-sensitive"
-        			shift
-        		elif [[ "$2" == "more" ]]; then
-        			diamond_sensitivity="--more-sensitive"
-        			shift
-        		elif [[ "$2" == "very" ]]; then
-        			diamond_sensitivity="--very-sensitive"
-        			shift
-        		elif [[ "$2" == "ultra" ]]; then
-        			diamond_sensitivity="--ultra-sensitive"
-        			shift
-        		elif [[ "$2" == "fast" ]]; then
-        			diamond_sensitivity=''
-        			shift
-        		else
-        			>&2 printf '\n%s\n\n' "[ERROR]: Unrecognized option for diamond sensitivity (options: default, fast, mid, more, very or ultra)."
-        			exit 1
-        		fi
-        	else
-        		>&2 printf '\n%s\n\n' "[ERROR]: --diamond-sensitivity requires an option (options: default, fast, mid, more, very or ultra)."
-        		exit 1
-            fi
-            ;;
         --cluster-cover)
         	if [[ "$2" =~ ^[0-9]+$ ]]; then
         		cluster_cover=$2
@@ -324,6 +274,77 @@ while [ ! $# -eq 0 ]; do
         		fi
         	fi
         	;;
+        --memory-limit)
+        	if [[ "$2" =~ ^[0-9]+$ ]]; then
+        		spades_memory="-m $2"
+        		shift
+        	elif [[ "$2" == -* ]]; then
+        		>&2 printf '\n%s\n\n' "[ERROR]: Give a RAM limit for SPAdes assembly."
+        		exit 1
+        	else
+        		>&2 printf '\n%s\n\n' "[ERROR]: The given RAM limit is not an integer."
+        		exit 1
+        	fi
+        	;;
+	# Classification
+        -d | --diamond-path)
+        	if [[ -s "$2" ]]; then
+        		diamond=1
+            	diamond_path=$(get_path "$2")
+            	shift
+            else
+            	>&2 printf '\n%s\n\n' "[ERROR]: The provided diamond database does not exist."
+            	exit 1
+            fi
+        	;;
+        -s | --sensitivity)
+        	if [[ "$2" != -* ]]; then
+        		if [[ "$2" == "default" ]]; then
+        			diamond_sensitivity="--sensitive"
+        			shift
+        		elif [[ "$2" == "mid" ]]; then
+        			diamond_sensitivity="--mid-sensitive"
+        			shift
+        		elif [[ "$2" == "more" ]]; then
+        			diamond_sensitivity="--more-sensitive"
+        			shift
+        		elif [[ "$2" == "very" ]]; then
+        			diamond_sensitivity="--very-sensitive"
+        			shift
+        		elif [[ "$2" == "ultra" ]]; then
+        			diamond_sensitivity="--ultra-sensitive"
+        			shift
+        		elif [[ "$2" == "fast" ]]; then
+        			diamond_sensitivity=''
+        			shift
+        		else
+        			>&2 printf '\n%s\n\n' "[ERROR]: Unrecognized option for diamond sensitivity (options: default, fast, mid, more, very or ultra)."
+        			exit 1
+        		fi
+        	else
+        		>&2 printf '\n%s\n\n' "[ERROR]: --diamond-sensitivity requires an option (options: default, fast, mid, more, very or ultra)."
+        		exit 1
+            fi
+            ;;
+    # General
+        -o | --outdir)
+            if [[ "$2" != -* ]]; then
+            	outdir=$(get_path "$2")
+            	shift
+            else
+            	>&2 printf '\n%s\n\n' "[ERROR]: You did not specify an output directory."
+            	exit 1
+            fi
+            ;;
+        -n | --name)
+        	if [[ "$2" == *['!'@#\$%^\&*()+]* ]]; then
+        		:
+        		shift
+        	else
+        		sample="$2"
+        		shift
+        	fi
+        	;;
         -t | --threads)
         	if [[ "$2" =~ ^[0-9]+$ ]]; then
         		threads=$2
@@ -335,15 +356,6 @@ while [ ! $# -eq 0 ]; do
         			>&2 printf '\n%s\n\n' "[WARNING]: Given threads not an integer, continuing with 4 threads."
         			shift
         		fi
-        	fi
-        	;;
-        -n | --name)
-        	if [[ "$2" == *['!'@#\$%^\&*()+]* ]]; then
-        		:
-        		shift
-        	else
-        		sample="$2"
-        		shift
         	fi
         	;;
         --keep-reads)
@@ -532,7 +544,7 @@ if [[ $skip_trimming -eq 0 ]]; then
 
 	trimmomatic PE -threads "$threads" "$read1_path" "$read2_path" TRIMMED/"$sample".TRIM.R1.fastq.gz TRIMMED/"$sample".R1.unpaired.fastq.gz \
 	TRIMMED/"$sample".TRIM.R2.fastq.gz TRIMMED/"$sample".R2.unpaired.fastq.gz \
-	ILLUMINACLIP:"$trimmomatic_primer":2:30:10:1:true HEADCROP:19 LEADING:15 TRAILING:15 \
+	ILLUMINACLIP:"$trimmomatic_primer":$illuminaclip HEADCROP:19 LEADING:15 TRAILING:15 \
 	SLIDINGWINDOW:4:20 MINLEN:50 $crop
 
 	if [[ $? -eq 0 ]]; then
