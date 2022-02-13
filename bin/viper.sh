@@ -26,6 +26,7 @@ read2_given=0
 unpaired=0
 sample=''
 illuminaclip="2:30:10:1:true"
+headcrop=0
 
 ##### FUNCTIONS #####
 #Help function
@@ -52,7 +53,8 @@ OPTIONAL:
    -p | --primer-file		Path to the primer file in fasta format with sequences that have to be trimmed by Trimmomatic, or a built-in option by Trimmomatic. 
    				(default: \$CONDA_PREFIX/share/trimmomatic/adapters/NexteraPE-PE.fa)
    --illuminaclip		ILLUMINACLIP options for Trimmomatic (apart from primer file). Has to be strictly in following layout with each value separated by a colon (:).
-   				<seed mismatches>:<palindrome clip threshold>:<simple clip threshold>:<minAdapterLength>:<keepBothReads> (default: 2:30:10:1:true)		
+   				<seed mismatches>:<palindrome clip threshold>:<simple clip threshold>:<minAdapterLength>:<keepBothReads> (default: 2:30:10:1:true)
+   --headcrop			Removes the specified number of bases, regardless of quality, from the beginning of the read. (default: 0)	
    --skip-trimming		Continue with given reads and do not trim the reads for quality and adapters with Trimmomatic. Useful when you already have trimmed your reads beforehand with other software for example.
 
  Contamination removal:
@@ -159,10 +161,10 @@ while [ ! $# -eq 0 ]; do
         		crop="CROP:$2"
         		shift
         	elif [[ "$2" == -* ]]; then
-        		>&2 printf '\n%s\n\n' "[ERROR]: Give a minimum length for assembled scaffolds."
+        		>&2 printf '\n%s\n\n' "[ERROR]: Give the length to which the reads should be cropped."
         		exit 1
         	else
-        		>&2 printf '\n%s\n\n' "[ERROR]: The given minimum length is not an integer."
+        		>&2 printf '\n%s\n\n' "[ERROR]: The given length is not an integer."
         		exit 1
         	fi
         	;;
@@ -185,8 +187,21 @@ while [ ! $# -eq 0 ]; do
         	skip_trimming=1
         	;;
         --illuminaclip)
+        	# echo $2 | awk -F: '$1 ~ /[0-5]/ && $2 ~ /[0-9]+/ && $3 ~ /[0-9]+/ && $4 ~ /[0-9]+/ && $5 ~ /^(true|false)$/ {print $0}'
         	illuminaclip="$2"
         	shift
+        	;;
+        --headcrop)
+        	if [[ "$2" =~ ^[0-9]+$ ]]; then
+        		headcrop="$2"
+        		shift
+        	elif [[ "$2" == -* ]]; then
+        		>&2 printf '\n%s\n\n' "[ERROR]: Give a length of which the amount in bases should be clipped of the beginning of the reads."
+        		exit 1
+        	else
+        		>&2 printf '\n%s\n\n' "[ERROR]: The given length is not an integer."
+        		exit 1
+        	fi
         	;;
     # Contamination removal
         -c | --contaminome)
@@ -546,7 +561,7 @@ if [[ $skip_trimming -eq 0 ]]; then
 
 	trimmomatic PE -threads "$threads" "$read1_path" "$read2_path" TRIMMED/"$sample".TRIM.R1.fastq.gz TRIMMED/"$sample".R1.unpaired.fastq.gz \
 	TRIMMED/"$sample".TRIM.R2.fastq.gz TRIMMED/"$sample".R2.unpaired.fastq.gz \
-	ILLUMINACLIP:"$trimmomatic_primer":$illuminaclip HEADCROP:19 LEADING:15 TRAILING:15 \
+	ILLUMINACLIP:"$trimmomatic_primer":$illuminaclip HEADCROP:$headcrop LEADING:15 TRAILING:15 \
 	SLIDINGWINDOW:4:20 MINLEN:50 $crop
 
 	if [[ $? -eq 0 ]]; then
