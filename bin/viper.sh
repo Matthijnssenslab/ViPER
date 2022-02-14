@@ -25,8 +25,8 @@ read1_given=0
 read2_given=0
 unpaired=0
 sample=''
-illuminaclip="2:30:10:1:true"
-headcrop=0
+illuminaclip="2:30:7:1:true"
+headcrop=19
 
 ##### FUNCTIONS #####
 #Help function
@@ -53,8 +53,8 @@ OPTIONAL:
    -p | --primer-file		Path to the primer file in fasta format with sequences that have to be trimmed by Trimmomatic, or a built-in option by Trimmomatic. 
    				(default: \$CONDA_PREFIX/share/trimmomatic/adapters/NexteraPE-PE.fa)
    --illuminaclip		ILLUMINACLIP options for Trimmomatic (apart from primer file). Has to be strictly in following layout with each value separated by a colon (:).
-   				<seed mismatches>:<palindrome clip threshold>:<simple clip threshold>:<minAdapterLength>:<keepBothReads> (default: 2:30:10:1:true)
-   --headcrop			Removes the specified number of bases, regardless of quality, from the beginning of the read. (default: 0)	
+   				<seed mismatches>:<palindrome clip threshold>:<simple clip threshold>:<minAdapterLength>:<keepBothReads> (default: 2:30:7:1:true)
+   --headcrop			Removes the specified number of bases, regardless of quality, from the beginning of the read. (default: 19)	
    --skip-trimming		Continue with given reads and do not trim the reads for quality and adapters with Trimmomatic. Useful when you already have trimmed your reads beforehand with other software for example.
 
  Contamination removal:
@@ -707,7 +707,7 @@ else
 fi
 
 # After all samples are done you can run multiqc to output the QC of all samples in 1 file
-#multiqc -o QC .
+#multiqc -s -o QC .
 
 ##############################################################################################################################################################
 
