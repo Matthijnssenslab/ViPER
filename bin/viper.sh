@@ -532,7 +532,7 @@ if [[ $skip_trimming -eq 0 ]]; then
 
 	trimmomatic PE -threads "$threads" "$read1_path" "$read2_path" TRIMMED/"$sample".TRIM.R1.fastq.gz TRIMMED/"$sample".R1.unpaired.fastq.gz \
 	TRIMMED/"$sample".TRIM.R2.fastq.gz TRIMMED/"$sample".R2.unpaired.fastq.gz \
-	ILLUMINACLIP:"$trimmomatic_primer":2:30:10:1:true HEADCROP:19 LEADING:15 TRAILING:15 \
+	ILLUMINACLIP:"$trimmomatic_primer":2:30:7:1:true HEADCROP:19 LEADING:15 TRAILING:15 \
 	SLIDINGWINDOW:4:20 MINLEN:50 $crop
 
 	if [[ $? -eq 0 ]]; then
