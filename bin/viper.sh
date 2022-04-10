@@ -784,15 +784,15 @@ if [[ $triple -eq 1 ]]; then
 	fi
 	blastn -query "$sample"_"$minlength".scaffolds.fasta -db clustering/"$sample"_"$minlength" -outfmt '6 std qlen slen' -max_target_seqs 10000 -perc_identity "$blastn_pid" -out clustering/"$sample"_"$minlength".tsv -num_threads "$threads"
 	anicalc.py -i clustering/"$sample"_"$minlength".tsv -o clustering/"$sample"_"$minlength"_ani.tsv
-	if [[ ! $? -eq 0 ]]; then
-		>&2 printf '\n%s\n\n' "[ERROR]: Failed to calculate ANI for clustering."
-		exit 1
+	if [[ $? -eq 0 ]]; then
+		aniclust.py --fna "$sample"_"$minlength".scaffolds.fasta --ani clustering/"$sample"_"$minlength"_ani.tsv --out "$sample"_"$minlength"_clusters.tsv --min_ani "$cluster_identity" --min_qcov 0 --min_tcov "$cluster_cover"
+		mv "$sample"_"$minlength".scaffolds.fasta "$sample"_"$minlength"-unclustered.scaffolds.fasta
+		cut -f1 "$sample"_"$minlength"_clusters.tsv > "$sample"_cluster_representatives.txt
+		seqkit grep -j "$threads" -f "$sample"_cluster_representatives.txt -n -o "$sample"_"$minlength".scaffolds.fasta "$sample"_"$minlength"-unclustered.scaffolds.fasta
+		seqkit sort --by-length --reverse -o "$sample"_"$minlength".scaffolds.fasta "$sample"_"$minlength".scaffolds.fasta
+	else
+		>&2 printf '\n%s\n\n' "[WARNING]: Failed to calculate ANI for clustering: continuing with all scaffolds larger than "$minlength"bp."
 	fi
-	aniclust.py --fna "$sample"_"$minlength".scaffolds.fasta --ani clustering/"$sample"_"$minlength"_ani.tsv --out "$sample"_"$minlength"_clusters.tsv --min_ani "$cluster_identity" --min_qcov 0 --min_tcov "$cluster_cover"
-	mv "$sample"_"$minlength".scaffolds.fasta "$sample"_"$minlength"-unclustered.scaffolds.fasta
-	cut -f1 "$sample"_"$minlength"_clusters.tsv > "$sample"_cluster_representatives.txt
-	seqkit grep -j "$threads" -f "$sample"_cluster_representatives.txt -n -o "$sample"_"$minlength".scaffolds.fasta "$sample"_"$minlength"-unclustered.scaffolds.fasta
-	seqkit sort --by-length --reverse -o "$sample"_"$minlength".scaffolds.fasta "$sample"_"$minlength".scaffolds.fasta
 else
 	cp ASSEMBLY/"$sample".scaffolds.fasta SCAFFOLDS/
 	cd SCAFFOLDS/
