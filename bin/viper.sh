@@ -1,4 +1,5 @@
 #!/bin/bash
+printf '%s\n' "$0 $@"
 
 ##### Setting default options #####
 outdir="$PWD"
@@ -25,7 +26,6 @@ read1_given=0
 read2_given=0
 unpaired=0
 sample=''
-viper_command="$0 $@"
 
 ##### FUNCTIONS #####
 #Help function
@@ -125,7 +125,7 @@ while [ ! $# -eq 0 ]; do
         		read1_path=$(get_path "$2") 
         		shift
         	else
-        		>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: The given forward read file does not exist or is empty."
+        		>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The given forward read file does not exist or is empty."
         		exit 1
         	fi
         	;;
@@ -135,7 +135,7 @@ while [ ! $# -eq 0 ]; do
         		read2_path=$(get_path "$2")
         		shift
         	else
-        		>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: The given reverse read file does not exist or is empty."
+        		>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The given reverse read file does not exist or is empty."
         		exit 1
         	fi
         	;;
@@ -145,7 +145,7 @@ while [ ! $# -eq 0 ]; do
         		unpaired=1
         		shift
         	else
-        		>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: The given unpaired read file does not exist or is empty."
+        		>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The given unpaired read file does not exist or is empty."
         		exit 1
         	fi
         	;;
@@ -154,7 +154,7 @@ while [ ! $# -eq 0 ]; do
             	outdir=$(get_path "$2")
             	shift
             else
-            	>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: You did not specify an output directory."
+            	>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: You did not specify an output directory."
             	exit 1
             fi
             ;;
@@ -164,7 +164,7 @@ while [ ! $# -eq 0 ]; do
                 contaminome=$(get_path "$2")
                 shift
             else
-    			>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: '-c | --contaminome' requires a bowtie2 indexed contaminome."
+    			>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: '-c | --contaminome' requires a bowtie2 indexed contaminome."
                 exit 1
             fi
             ;;
@@ -173,10 +173,10 @@ while [ ! $# -eq 0 ]; do
         		minlength=$2
         		shift
         	elif [[ "$2" == -* ]]; then
-        		>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: Give a minimum length for assembled scaffolds."
+        		>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: Give a minimum length for assembled scaffolds."
         		exit 1
         	else
-        		>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: The given minimum length is not an integer."
+        		>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The given minimum length is not an integer."
         		exit 1
         	fi
         	;;
@@ -185,10 +185,10 @@ while [ ! $# -eq 0 ]; do
         		spades_memory="-m $2"
         		shift
         	elif [[ "$2" == -* ]]; then
-        		>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: Give a RAM limit for SPAdes assembly."
+        		>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: Give a RAM limit for SPAdes assembly."
         		exit 1
         	else
-        		>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: The given RAM limit is not an integer."
+        		>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The given RAM limit is not an integer."
         		exit 1
         	fi
         	;;
@@ -197,10 +197,10 @@ while [ ! $# -eq 0 ]; do
         		crop="CROP:$2"
         		shift
         	elif [[ "$2" == -* ]]; then
-        		>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: Give a minimum length for assembled scaffolds."
+        		>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: Give a minimum length for assembled scaffolds."
         		exit 1
         	else
-        		>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: The given minimum length is not an integer."
+        		>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The given minimum length is not an integer."
         		exit 1
         	fi
         	;;
@@ -213,7 +213,7 @@ while [ ! $# -eq 0 ]; do
                 host_genome=$(get_path "$2")
                 shift
             else
-                >&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: With '--host-genome' specified, viper.sh requires a bowtie2 indexed host genome."
+                >&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: With '--host-genome' specified, viper.sh requires a bowtie2 indexed host genome."
                 exit 1
             fi
             ;;
@@ -221,13 +221,13 @@ while [ ! $# -eq 0 ]; do
         	echo "$2" | \
 				while read -d, i || [[ -n $i ]]; do 
 					if [[ ! "$i" =~ ^[0-9]+$ ]]; then
-						>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: Given k-mers contain a non-integer."
+						>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: Given k-mers contain a non-integer."
 						exit 1
 					elif [ $((i%2)) -eq 0 ]; then 
-						>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: Even k-mer is not possible."
+						>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: Even k-mer is not possible."
 						exit 1
 					elif [[ $i -gt 128 ]]; then
-						>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: K-mer greater than 128."
+						>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: K-mer greater than 128."
 						exit 1
 					fi
 				done
@@ -235,7 +235,7 @@ while [ ! $# -eq 0 ]; do
         		spades_k_mer=$2
         		shift
         	else
-        		>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: Something is wrong with k-mer list (see message above)."
+        		>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: Something is wrong with k-mer list (see message above)."
         		exit 1
         	fi
         	;;
@@ -245,7 +245,7 @@ while [ ! $# -eq 0 ]; do
             	diamond_path=$(get_path "$2")
             	shift
             else
-            	>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: The provided diamond database does not exist."
+            	>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The provided diamond database does not exist."
             	exit 1
             fi
         	;;
@@ -259,11 +259,11 @@ while [ ! $# -eq 0 ]; do
                 	trimmomatic_primer=$(get_path "$2")
                 	shift
                 else
-                	>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: The given primer file is not a valid fasta."
+                	>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The given primer file is not a valid fasta."
                 	exit 1
                 fi
             else
-    			>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: '--trimmomatic' requires a primer file in fasta format."
+    			>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: '--trimmomatic' requires a primer file in fasta format."
                 exit 1
             fi
             ;;
@@ -288,11 +288,11 @@ while [ ! $# -eq 0 ]; do
         			diamond_sensitivity=''
         			shift
         		else
-        			>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: Unrecognized option for diamond sensitivity (options: default, fast, mid, more, very or ultra)."
+        			>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: Unrecognized option for diamond sensitivity (options: default, fast, mid, more, very or ultra)."
         			exit 1
         		fi
         	else
-        		>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: --diamond-sensitivity requires an option (options: default, fast, mid, more, very or ultra)."
+        		>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: --diamond-sensitivity requires an option (options: default, fast, mid, more, very or ultra)."
         		exit 1
             fi
             ;;
@@ -302,10 +302,10 @@ while [ ! $# -eq 0 ]; do
         		shift
         	else
         		if [[ "$2" = -* ]]; then
-        			>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: No minimal % of covered sequence given for clustering."
+        			>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: No minimal % of covered sequence given for clustering."
         			exit 1
         		else
-        			>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: Given value for --cluster-cover is not an integer."
+        			>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: Given value for --cluster-cover is not an integer."
         			exit 1
         		fi
         	fi
@@ -317,10 +317,10 @@ while [ ! $# -eq 0 ]; do
         		shift
         	else
         		if [[ "$2" = -* ]]; then
-        			>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: No % of sequence identity given for clustering."
+        			>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: No % of sequence identity given for clustering."
         			exit 1
         		else
-        			>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: Given value for --cluster-identity is not an integer."
+        			>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: Given value for --cluster-identity is not an integer."
         			exit 1
         		fi
         	fi
@@ -331,9 +331,9 @@ while [ ! $# -eq 0 ]; do
         		shift
         	else
         		if [[ "$2" = -* ]]; then
-        			>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] WARNING: No specified threads given, continuing with 4 threads."
+        			>&2 printf '%s\n' "[$(date "+%F %H:%M")] WARNING: No specified threads given, continuing with 4 threads."
         		else
-        			>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] WARNING: Given threads not an integer, continuing with 4 threads."
+        			>&2 printf '%s\n' "[$(date "+%F %H:%M")] WARNING: Given threads not an integer, continuing with 4 threads."
         			shift
         		fi
         	fi
@@ -355,7 +355,7 @@ while [ ! $# -eq 0 ]; do
             exit
             ;;
         *)
-            >&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: unrecognized option $1."
+            >&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: unrecognized option $1."
             usage
             exit 1
             ;;
@@ -368,14 +368,14 @@ commands='seqkit samtools ktClassifyBLAST metaspades.py trimmomatic pigz bwa-mem
 for i in $commands; do
 	command -v $i &> /dev/null
 	if [[ ! $? -eq 0 ]]; then
-    	printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: "$i" could not be found, please install "$i" in PATH or activate your conda environment."
+    	printf '%s\n' "[$(date "+%F %H:%M")] ERROR: "$i" could not be found, please install "$i" in PATH or activate your conda environment."
     	exit 1
 	fi
 done
 
 #Check if output directory already exists
 if [[ -d "$outdir"/ASSEMBLY ]]; then
-	>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: The output directory already exists."
+	>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The output directory already exists."
 	exit 1
 fi
 
@@ -384,15 +384,15 @@ if [[ $read1_given -eq 1 ]]; then
 	if [[ -s "$read1_path" ]]; then
 		seqkit head "$read1_path" | seqkit stats | grep 'FASTQ' > /dev/null 2>&1
 		if [[ ! $? -eq 0 ]]; then
-			>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: The provided file "$read1_path" is not a FASTQ file."
+			>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The provided file "$read1_path" is not a FASTQ file."
 			exit 1
 		fi
 	else
-		>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: The provided path "$read1_path" does not lead to a file."
+		>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The provided path "$read1_path" does not lead to a file."
 		exit 1
 	fi
 else
-	>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: No forward reads given."
+	>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: No forward reads given."
 	exit 1
 fi
 
@@ -401,32 +401,32 @@ if [[ $read2_given -eq 1 ]]; then
 	if [[ -s "$read2_path" ]]; then
 		seqkit head "$read2_path" | seqkit stats | grep 'FASTQ' > /dev/null 2>&1
 		if [[ ! $? -eq 0 ]]; then
-			>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: The provided file "$read2_path" is not a FASTQ file."
+			>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The provided file "$read2_path" is not a FASTQ file."
 			exit 1
 		fi
 	else
-		>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: The provided path "$read2_path" does not lead to a file."
+		>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The provided path "$read2_path" does not lead to a file."
 		exit 1
 	fi
 else
-	>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: No reverse reads given."
+	>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: No reverse reads given."
 	exit 1
 fi
 
 
 if [[ $unpaired -eq 1 ]]; then
 	if [[ $skip_trimming -eq 0 ]]; then
-		>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: You have to skip trimming if you want to provide an unpaired read file."
+		>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: You have to skip trimming if you want to provide an unpaired read file."
 		exit 1
 	else
 		if [[ -s "$unpaired_path" ]]; then
 			seqkit head "$unpaired_path" | seqkit stats | grep 'FASTQ' > /dev/null 2>&1
 			if [[ ! $? -eq 0 ]]; then
-				>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: The provided file "$unpaired_path" is not a FASTQ file."
+				>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The provided file "$unpaired_path" is not a FASTQ file."
 				exit 1
 			fi
 		else
-			>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: The provided path "$unpaired_path" does not lead to a file."
+			>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The provided path "$unpaired_path" does not lead to a file."
 			exit 1
 		fi
 	fi
@@ -438,11 +438,11 @@ if [[ $contaminome_removal -eq 1 ]]; then
 	if [[ -n "$contaminome" ]]; then
 		bowtie2-inspect -n "$contaminome" > /dev/null 2>&1
 		if [[ ! $? -eq 0 ]]; then
-			>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: The provided path by [-c | --contaminome] does not lead to a valid bowtie2 indexed contaminome."
+			>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The provided path by [-c | --contaminome] does not lead to a valid bowtie2 indexed contaminome."
 			exit 1
 		fi
 	else
-		>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: No contaminome provided."
+		>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: No contaminome provided."
 		exit 1
 	fi
 fi
@@ -452,11 +452,11 @@ fi
 if [[ $diamond -eq 1 ]]; then
 	dbinfo=$(diamond dbinfo -p "$threads" -d "$diamond_path" --quiet | grep 'version' | grep -o -E [0-9]+) > /dev/null 2>&1
 	if [[ ! $? -eq 0 ]]; then
-		>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: The provided file is not a diamond database."
+		>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The provided file is not a diamond database."
 		exit 1
 	elif [[ $dbinfo -le 1 ]]; then
-		>&2 printf '\n%s' "[$(date "+%F %H:%M")] ERROR: This database was made with an older version of diamond and is not compatible."
-		>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: Please remake your diamond database with a version of Diamond 2.0 or higher."
+		>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: This database was made with an older version of diamond and is not compatible."
+		>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: Please remake your diamond database with a version of Diamond 2.0 or higher."
 		exit 1
 	fi
 fi
@@ -467,16 +467,16 @@ fi
 if [[ $host_removal -eq 1 ]]; then
 	if [[ -z "$host_genome" ]]; then
 		if [[ ! $? -eq 0 ]]; then
-			>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: No host genome specified."
+			>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: No host genome specified."
 			exit 1
 		fi
 	else
 		bowtie2-inspect -n "$host_genome" > /dev/null 2>&1
 		if [[ ! $? -eq 0 ]]; then
-			>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: The provided path does not lead to a valid bowtie2 indexed host genome."
+			>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The provided path does not lead to a valid bowtie2 indexed host genome."
 			exit 1
 		else 
-			printf '\n%s\n' "[$(date "+%F %H:%M")] INFO: Removing reads that map to $host_genome."
+			printf '%s\n' "[$(date "+%F %H:%M")] INFO: Removing reads that map to $host_genome."
 		fi
 	fi
 fi
@@ -499,8 +499,7 @@ if [[ -z "$sample" ]]; then
 fi
 
 ##### START PIPELINE #####
-printf '\n%s\n' "[$(date "+%F %H:%M")] INFO: Starting ViPER!"
-printf '%s\n\n' "$viper_command"
+printf '%s\n' "[$(date "+%F %H:%M")] INFO: Starting ViPER!"
 
 mkdir -p "$outdir"
 cd "$outdir"
