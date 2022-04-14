@@ -1,5 +1,6 @@
 #!/bin/bash
-printf '%s\n' "$0 $@"
+viper_command="$0 $@"
+printf '%s\n' "$viper_command"
 
 ##### Setting default options #####
 outdir="$PWD"
