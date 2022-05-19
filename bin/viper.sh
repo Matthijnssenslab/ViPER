@@ -728,6 +728,7 @@ if [[ $triple -eq 1 ]]; then
 	sed -i "s/>.*/&_${sample}/" "$sample".full.scaffolds.fasta
 
 	# 10% assembly
+	printf '\n\n%s\n' "[$(date "+%F %H:%M")] INFO: Starting second assembly with 10% of the reads."
 	cd "$outdir"/ASSEMBLY
 	metaspades.py -1 "$subset10_R1" -2 "$subset10_R2" \
 	-t "$threads" -k "$spades_k_mer" -o ASSEMBLY2 $spades_memory
@@ -738,6 +739,7 @@ if [[ $triple -eq 1 ]]; then
 	sed -i "s/>.*/&_${sample}/" "$sample".10-percent.scaffolds.fasta
 
 	# 1% assembly
+	printf '\n\n%s\n' "[$(date "+%F %H:%M")] INFO: Starting third assembly with 1% of the reads."
 	cd "$outdir"/ASSEMBLY
 	metaspades.py -1 "$subset1_R1" -2 "$subset1_R2" \
 	-t "$threads" -k "$spades_k_mer" -o ASSEMBLY3 $spades_memory
