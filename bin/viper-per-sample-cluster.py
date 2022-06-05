@@ -363,7 +363,7 @@ def clustering(fasta, output, threads, pid, cov):
     
     anicalc_dict=anicalc("tmp_clustering/"+output+".out")
 
-    keep=aniclust(fasta, anicalc_dict, "tmp_clustering/"+output, 
+    keep=aniclust(fasta, anicalc_dict, #"tmp_clustering/"+output, 
                   min_ani=pid, min_tcov=cov)
     
     with open(output+".fasta", "w") as f:
