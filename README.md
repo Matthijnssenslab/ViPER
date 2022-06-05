@@ -104,13 +104,13 @@ The resulting contigs have to be indexed by Bowtie2 and can subsequently be used
     List of k-mer sizes for SPAdes (must be odd and less than 128). (default: 21,33,55,77)
 
 `--triple-assembly`
-    Will perform three *denovo* assemblies with metaspades on the full reads, a 10% and 1% subset of the reads. All assembled scaffolds will be concatenated and clustered together to remove redundancy (see also `--cluster-cover/identity`).
+    Will perform three *de novo* assemblies with metaspades on the full reads, a 10% and 1% subset of the reads. All assembled scaffolds will be concatenated and clustered together to remove redundancy (see also `--cluster-cover/identity`).
 
 `--cluster-cover`
-    % of the shortest sequence that should be covered during clustering. (default: 99)
+    % of the shortest sequence that should be covered during clustering. (default: 85)
 
 `--cluster-identity`
-    % of ANI for clustering scaffolds. (default: 99)
+    % of ANI for clustering scaffolds. (default: 95)
 
 `--memory-limit`
     Memory (in GB) to be reserved for SPAdes assembly. (default: 250)
