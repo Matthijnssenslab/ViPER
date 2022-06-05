@@ -319,7 +319,7 @@ if [[ $diamond -eq 1 ]]; then
 fi
 
 if [[ $? -eq 0 ]]; then
-	printf '\n%s\n' "[INFO]: viper-classify finished successfully! "
+	printf '\n%s\n' "[$(date "+%F %H:%M")] INFO: viper-classify finished successfully! "
 else
 	>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: viper-classify finished abnormally."
 fi
