@@ -396,11 +396,14 @@ def main():
     minlength=args['length']
     bed=args['bed']
     
-    print(f"\nMaking BED files..")
+    print(f"\nMaking BED files...")
     
     viralbed, hostbed = make_bed(contamination, output, minlength, keepBed=bed)
     
     if viralbed is None and hostbed is None:
+        print(f"\nClustering contigs...")
+        clustering(fasta, output, 
+               args['threads'], args['pid'], args['cov'])
         shutil.rmtree('tmp_clustering')
         sys.exit()
     
