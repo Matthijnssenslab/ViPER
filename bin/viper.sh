@@ -680,7 +680,7 @@ else
 fi
 
 # After all samples are done you can run multiqc to output the QC of all samples in 1 file
-#multiqc -o QC .
+#multiqc -s -o QC .
 
 ##############################################################################################################################################################
 

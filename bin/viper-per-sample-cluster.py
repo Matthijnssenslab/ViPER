@@ -45,11 +45,9 @@ def make_bed(contamination, output, minlength, keepBed=False):
                     print(f"WARNING: Other types of contamination:")
                 print(f"{row['contig_id']}")
     if provirus_count == 0:
-        print("\n")
         print(f"No proviruses found in the data.")
         return None, None
     elif count > 0:
-        print("\n")
         print(f"{count} contigs had another type of contamination.")
             
     df1=pd.DataFrame(data)
@@ -375,8 +373,10 @@ def main():
     args=parse_arguments()
     fasta=args['fasta']
     
-    if not os.path.exists("tmp_clustering"):
-        os.mkdir("tmp_clustering")
+    if os.path.exists("tmp_clustering"):
+        shutil.rmtree("tmp_clustering")
+    
+    os.mkdir("tmp_clustering")
     
     checkv_arguments={"input": fasta,
          "db": args['db'],
@@ -421,8 +421,8 @@ def main():
     viral_exclude=set()
     for index, row in viralbed.iterrows():
         if row['contig_id'] in include:
-            list_index=include.index(row['contig_id'])
-            include[list_index]=row['bed_name']
+            include.remove(row['contig_id'])
+            include.add(row['bed_name'])
             viral_exclude.add(row['bed_name'])
             
     clean_v_dict = {k: v for k, v in vdict.items() if k.lstrip(">") not in viral_exclude}
