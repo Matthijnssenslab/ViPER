@@ -215,7 +215,7 @@ def aniclust(
     return clust_to_seqs
 
 
-def clustering(fasta, output, threads, pid=95, cov=85):
+def clustering(fasta, output, threads, pid=95, cov=85, returnDict=False):
     if os.path.exists("blastdb"):
         shutil.rmtree("blastdb")
     os.mkdir("blastdb")
@@ -243,3 +243,6 @@ def clustering(fasta, output, threads, pid=95, cov=85):
             if seq.id in aniclust_dict.keys():
                 SeqIO.write(seq, f, "fasta")
     shutil.rmtree("blastdb")
+
+    if returnDict:
+        return aniclust_dict
