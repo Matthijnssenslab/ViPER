@@ -94,7 +94,8 @@ def make_bed(contamination, output, minlength, keepBed=False):
     data = []
     provirus_count = 0
     count = 0
-    for index, row in df.iterrows():
+    df_dict = df.to_dict("records")
+    for row in df_dict:
         if row["provirus"] == "Yes":
             provirus_count += 1
             if row["region_types"] == "viral,host":
@@ -154,7 +155,8 @@ def make_bed(contamination, output, minlength, keepBed=False):
 
     vdata = []
     hdata = []
-    for index, row in df4.iterrows():
+    df4_dict = df4.to_dict("records")
+    for row in df4_dict:
         if row["region_types"] == "viral" and row["region_lengths"] >= minlength:
             row["bed_name"] = row["contig_id"].replace("_length", "v_length")
             row["bed_name"] = row["bed_name"].replace(
@@ -206,7 +208,8 @@ def quality_summary_selection(checkv_summary):
         "high kmer_freq may indicate large duplication",
         "contig >1.5x longer than expected genome length",
     ]
-    for index, row in df.iterrows():
+    df_dict = df.to_dict("records")
+    for row in df_dict:
         if row["provirus"] == "Yes" or any(
             x in row["warnings"] for x in warnings
         ):  # ['kmer', 'longer']):
@@ -350,7 +353,6 @@ def anicalc(blast_input, pid=90, length=0):
             alns = prune_alns(alns, min_pid=pid, min_len=length)
             if len(alns) == 0:
                 continue
-            index += 1
             qname, tname = alns[0]["qname"], alns[0]["tname"]
             ani = compute_ani(alns)
             qcov, tcov = compute_cov(alns)
@@ -362,6 +364,7 @@ def anicalc(blast_input, pid=90, length=0):
                 "qcov": qcov,
                 "tcov": tcov,
             }
+            index += 1
         return anicalc_dict
 
 
@@ -400,7 +403,8 @@ def aniclust(
     # store edges
     print("\nstoring edges...")
     num_edges = 0
-    edges = dict([(x, []) for x in seqs])
+    # edges = dict([(x, []) for x in seqs])
+    edges = {x: [] for x in seqs}
 
     for i in anicalc_dict:
         if anicalc_dict[i]["qname"] == anicalc_dict[i]["tname"]:
@@ -540,7 +544,7 @@ def main():
     include, exclude = quality_summary_selection(qsummary)
 
     viral_exclude = set()
-    for index, row in viralbed.iterrows():
+    for row in viralbed.to_dict("records"):
         if row["contig_id"] in include:
             include.remove(row["contig_id"])
             include.add(row["bed_name"])
