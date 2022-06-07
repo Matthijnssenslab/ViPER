@@ -215,7 +215,7 @@ def aniclust(
     return clust_to_seqs
 
 
-def clustering(fasta, output, threads, pid, cov):
+def clustering(fasta, output, threads, pid=95, cov=85):
     os.mkdir("blastdb")
     makedb = NcbimakeblastdbCommandline(
         dbtype="nucl", input_file=fasta, out="blastdb/" + output + "_db"
