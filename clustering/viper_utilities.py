@@ -1,4 +1,4 @@
-import os
+import os, shutil, gzip
 import pandas as pd
 from Bio import SeqIO
 from Bio.Blast.Applications import NcbiblastnCommandline, NcbimakeblastdbCommandline
@@ -216,6 +216,8 @@ def aniclust(
 
 
 def clustering(fasta, output, threads, pid=95, cov=85):
+    if os.path.exists("blastdb"):
+        shutil.rmtree("blastdb")
     os.mkdir("blastdb")
     makedb = NcbimakeblastdbCommandline(
         dbtype="nucl", input_file=fasta, out="blastdb/" + output + "_db"
