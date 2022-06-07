@@ -236,9 +236,10 @@ def clustering(fasta, output, threads, pid=95, cov=85):
 
     anicalc_df = anicalc(output + ".out")
 
-    aniclust_df = aniclust(fasta, anicalc_df, output, min_ani=pid, min_tcov=cov)
+    aniclust_dict = aniclust(fasta, anicalc_df, min_ani=pid, min_tcov=cov)
 
     with open(output + ".fasta", "w") as f:
         for seq in SeqIO.parse(fasta, "fasta"):
-            if seq.id in aniclust_df.keys():
+            if seq.id in aniclust_dict.keys():
                 SeqIO.write(seq, f, "fasta")
+    shutil.rmtree("blastdb")
