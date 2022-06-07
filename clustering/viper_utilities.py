@@ -164,12 +164,12 @@ def aniclust(
     edges = {x: [] for x in seqs}
 
     df2 = anicalc_df.loc[
-        (df["qname"] != df["tname"])
-        & (df["qname"].isin(edges.keys()))
-        & (df["tname"].isin(edges.keys()))
-        & (df["pid"] >= min_ani)
-        & (df["qcov"] >= min_qcov)
-        & (df["tcov"] >= min_tcov),
+        (anicalc_df["qname"] != anicalc_df["tname"])
+        & (anicalc_df["qname"].isin(edges.keys()))
+        & (anicalc_df["tname"].isin(edges.keys()))
+        & (anicalc_df["pid"] >= min_ani)
+        & (anicalc_df["qcov"] >= min_qcov)
+        & (anicalc_df["tcov"] >= min_tcov),
         ["qname", "tname"],
     ]
     for row in df2.to_dict("records"):
