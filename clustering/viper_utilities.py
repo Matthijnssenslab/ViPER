@@ -243,6 +243,7 @@ def clustering(fasta, output, threads, pid=95, cov=85, returnDict=False):
             if seq.id in aniclust_dict.keys():
                 SeqIO.write(seq, f, "fasta")
     shutil.rmtree("blastdb")
+    os.remove(output + ".out")
 
     if returnDict:
         return aniclust_dict

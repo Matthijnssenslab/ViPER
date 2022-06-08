@@ -94,31 +94,15 @@ def make_bed(contamination, output, minlength, keepBed=False):
     df = pd.read_csv(contamination, sep="\t", dtype=object)
 
     col_list = ["contig_id", "region_types", "region_lengths", "region_coords_bp"]
-    data = []
-    provirus_count = 0
-    count = 0
-    df_dict = df.to_dict("records")
-    for row in df_dict:
-        if row["provirus"] == "Yes":
-            provirus_count += 1
-            if row["region_types"] == "viral,host":
-                data.append(row[col_list])
-            elif row["region_types"] == "host,viral":
-                data.append(row[col_list])
-            elif row["region_types"] == "host,viral,host":
-                data.append(row[col_list])
-            else:
-                count = +1
-                if count == 1:
-                    print(f"WARNING: Other types of contamination:")
-                print(f"{row['contig_id']}")
-    if provirus_count == 0:
-        print(f"No proviruses found in the data.")
-        return None, None
-    elif count > 0:
-        print(f"{count} contigs had another type of contamination.")
 
-    df1 = pd.DataFrame(data)
+    df1 = df.loc[(df["provirus"] == "Yes"), col_list]
+
+    contamination_list = ["viral,host", "host,viral", "host,viral,host"]
+
+    if not df1.loc[~df1["region_types"].isin(contamination_list)].empty:
+        print(f"WARNING: Other types of contamination:")
+        print(*df1["contig_id"].values, sep="\n")
+    df1 = df1.loc[df1["region_types"].isin(contamination_list)]
 
     df2 = pd.concat(
         [
@@ -156,30 +140,31 @@ def make_bed(contamination, output, minlength, keepBed=False):
     ].apply(pd.to_numeric)
     df4[["start", "end"]] -= 1
 
-    vdata = []
-    hdata = []
-    df4_dict = df4.to_dict("records")
-    for row in df4_dict:
-        if row["region_types"] == "viral" and row["region_lengths"] >= minlength:
-            row["bed_name"] = row["contig_id"].replace("_length", "v_length")
-            row["bed_name"] = row["bed_name"].replace(
-                "_cov", "v" + str(row["region_lengths"]) + "_cov"
-            )
-            vdata.append(row[["contig_id", "start", "end", "bed_name"]])
-        elif row["region_types"] == "host" and row["region_lengths"] >= minlength:
-            row["bed_name"] = row["contig_id"].replace("_length", "h_length")
-            row["bed_name"] = row["bed_name"].replace(
-                "_cov", "h" + str(row["region_lengths"]) + "_cov"
-            )
-            hdata.append(row[["contig_id", "start", "end", "bed_name"]])
-    viral = pd.DataFrame(vdata)
-    host = pd.DataFrame(hdata)
+    viraldf = df4.loc[
+        (df4["region_types"] == "viral") & (df4["region_lengths"] >= minlength),
+        ["contig_id", "region_lengths", "start", "end"],
+    ]
+    viraldf.loc[:, "bed_name"] = [
+        x.replace("_cov", "v" + str(y) + "_cov").replace("_length", "v_length")
+        for x, y in viraldf[["contig_id", "region_lengths"]].to_numpy()
+    ]
+    viraldf.drop("region_lengths", inplace=True, axis=1)
+
+    hostdf = df4.loc[
+        (df4["region_types"] == "host") & (df4["region_lengths"] >= minlength),
+        ["contig_id", "region_lengths", "start", "end"],
+    ]
+    hostdf.loc[:, "bed_name"] = [
+        x.replace("_cov", "h" + str(y) + "_cov").replace("_length", "h_length")
+        for x, y in hostdf[["contig_id", "region_lengths"]].to_numpy()
+    ]
+    hostdf.drop("region_lengths", inplace=True, axis=1)
 
     if keepBed:
-        viral.to_csv(output + "_viral.bed", sep="\t", header=False, index=False)
-        host.to_csv(output + "_host.bed", sep="\t", header=False, index=False)
+        viraldf.to_csv(output + "_viral.bed", sep="\t", header=False, index=False)
+        hostdf.to_csv(output + "_host.bed", sep="\t", header=False, index=False)
 
-    return viral, host
+    return viraldf, hostdf
 
 
 def bedtools(bed, fasta):
