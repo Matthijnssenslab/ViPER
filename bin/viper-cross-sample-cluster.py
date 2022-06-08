@@ -11,7 +11,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.MetavarTypeHelpFormatter,
         description=f"""
-        Script to cluster contigs across a study and reinclude contigs that had contamination issues.
+        Script to cluster contigs across a study and reinclude contigs that had contamination issues as assessed by the ViPER per sample clustering.
     """,
     )
     parser.add_argument(
@@ -76,8 +76,12 @@ def main():
     output = args["output"]
     threads = args["threads"]
 
+    print(f"Clustering sequences...")
     clust_seqs = vu.clustering(cluster_fasta, output, threads, returnDict=True)
 
+    print(
+        f"Calculating ANI and coverage of sequences to be reincluded against clustered sequences..."
+    )
     makedb = NcbimakeblastdbCommandline(
         dbtype="nucl", input_file=output + ".fasta", out="blastdb/" + output + "_db"
     )
@@ -130,6 +134,7 @@ def main():
         name, sequence = fasta.id, str(fasta.seq)
         fasta_length_dictionary[name] = len(sequence)
 
+    print(f"Add sequences with possible duplications...")
     qcov_dict = {}
     for contig in qcov85:
         data = []
@@ -143,6 +148,7 @@ def main():
         subset = {key: fasta_length_dictionary[key] for key in data}
         qcov_dict[contig] = max(subset, key=subset.get)
 
+    print(f"Add possible chimeric sequences...")
     tcov_dict = {}
     for contig in tcov85:
         data = []
@@ -164,6 +170,7 @@ def main():
             qcov_sum = df["qcov"].sum()
         tcov_dict[contig] = df["tname"].tolist()
 
+    print(f"Add singleton sequences...")
     single_dict = {}
     for contig in singletons:
         single_dict[contig] = contig
@@ -179,6 +186,7 @@ def main():
         else:
             clust_seqs[v].append(k)
 
+    print(f"Write fasta file with clustered sequences...")
     with open(output + "_" + args["pid"] + "-" + args["cov"] + ".fasta", "w") as f:
         reinclude_sequences = SeqIO.parse(reinclude_fasta, "fasta")  # generator
         for fasta in reinclude_sequences:
@@ -190,6 +198,7 @@ def main():
             if fasta.id in clust_seqs.keys():
                 SeqIO.write(fasta, f, "fasta")
 
+    print(f"Write file with clusters and their respective cluster representatives...")
     with open(output + "_cluster_representatives.txt", "w") as out:
         for seq_id, mem_ids in clust_seqs.items():
             out.write(seq_id + "\t" + ",".join(mem_ids) + "\n")
