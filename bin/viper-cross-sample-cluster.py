@@ -182,3 +182,7 @@ def main():
     with open(output + "_cluster_representatives.txt", "w") as out:
         for seq_id, mem_ids in clust_seqs.items():
             out.write(seq_id + "\t" + ",".join(mem_ids) + "\n")
+
+
+if __name__ == "__main__":
+    main()
