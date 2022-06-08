@@ -175,13 +175,25 @@ def main():
             for i in v:
                 clust_seqs[i].append(k)
         elif v not in clust_seqs:
-            clust_seqs[v] = k
+            clust_seqs[v] = list(k)
         else:
             clust_seqs[v].append(k)
+
+    with open(output + "_" + args["pid"] + "-" + args["cov"] + ".fasta", "w") as f:
+        for fasta in reinclude_sequences:
+            if fasta.id in clust_seqs.keys():
+                SeqIO.write(fasta, f, "fasta")
+
+        for fasta in fasta_sequences:
+            if fasta.id in clust_seqs.keys():
+                SeqIO.write(fasta, f, "fasta")
 
     with open(output + "_cluster_representatives.txt", "w") as out:
         for seq_id, mem_ids in clust_seqs.items():
             out.write(seq_id + "\t" + ",".join(mem_ids) + "\n")
+
+    shutil.rmtree("blastdb")
+    os.remove(output + "_reinclude.out")
 
 
 if __name__ == "__main__":
