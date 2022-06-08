@@ -180,10 +180,12 @@ def main():
             clust_seqs[v].append(k)
 
     with open(output + "_" + args["pid"] + "-" + args["cov"] + ".fasta", "w") as f:
+        reinclude_sequences = SeqIO.parse(reinclude_fasta, "fasta")  # generator
         for fasta in reinclude_sequences:
             if fasta.id in clust_seqs.keys():
                 SeqIO.write(fasta, f, "fasta")
 
+        fasta_sequences = SeqIO.parse(output + ".fasta", "fasta")
         for fasta in fasta_sequences:
             if fasta.id in clust_seqs.keys():
                 SeqIO.write(fasta, f, "fasta")
