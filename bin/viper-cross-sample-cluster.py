@@ -11,12 +11,22 @@ def parse_arguments():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.MetavarTypeHelpFormatter,
         description=f"""
+        Script to cluster contigs across a study and reinclude contigs that had contamination issues.
     """,
     )
     parser.add_argument(
-        "-i",
-        "--input",
-        dest="fasta",
+        "-c",
+        "--cluster-fasta",
+        dest="cluster_fasta",
+        required=True,
+        type=str,
+        metavar="PATH",
+        help="Fasta file.",
+    )
+    parser.add_argument(
+        "-r",
+        "--reinclude-fasta",
+        dest="reinclude_fasta",
         required=True,
         type=str,
         metavar="PATH",
@@ -40,7 +50,6 @@ def parse_arguments():
         help="Number of threads to use.",
         default=1,
     )
-    # parser.add_argument('-l', '--length', dest='length', type=int, metavar='INT', help="Minimum length of the host or viral region.", default=1000)
     parser.add_argument(
         "--min-identity",
         dest="pid",
@@ -57,7 +66,6 @@ def parse_arguments():
         help="Minimum coverage %% of the shortest sequence that should be covered before clustering.",
         default=85,
     )
-    # parser.add_argument('--keep-bed', dest='bed', action='store_true', help="Keep BED files with viral and host regions.", default=False)
     return vars(parser.parse_args())
 
 
@@ -94,13 +102,17 @@ def main():
     singletons = set()
 
     for row in anicalc_dict:
-        if row["pid"] >= 95 and row["qcov"] >= 85 and row["qname"] not in qcov85:
+        if (
+            row["pid"] >= args["pid"]
+            and row["qcov"] >= args["cov"]
+            and row["qname"] not in qcov85
+        ):
             qcov85.add(row["qname"])
 
     for row in anicalc_dict:
         if (
-            row["pid"] >= 95
-            and row["tcov"] >= 85
+            row["pid"] >= args["pid"]
+            and row["tcov"] >= args["cov"]
             and row["qname"] not in qcov85.union(tcov85)
         ):
             tcov85.add(row["qname"])
@@ -122,7 +134,11 @@ def main():
     for contig in qcov85:
         data = []
         for row in anicalc_dict:
-            if row["qname"] == contig and row["pid"] >= 95 and row["qcov"] >= 85:
+            if (
+                row["qname"] == contig
+                and row["pid"] >= args["pid"]
+                and row["qcov"] >= args["cov"]
+            ):
                 data.append(row["tname"])
         subset = {key: fasta_length_dictionary[key] for key in data}
         qcov_dict[contig] = max(subset, key=subset.get)
@@ -131,7 +147,11 @@ def main():
     for contig in tcov85:
         data = []
         for row in anicalc_dict:
-            if row["qname"] == contig and row["pid"] >= 95 and row["tcov"] >= 85:
+            if (
+                row["qname"] == contig
+                and row["pid"] >= args["pid"]
+                and row["tcov"] >= args["cov"]
+            ):
                 data.append(row)
         df = pd.DataFrame(data)
         df.sort_values(by=["pid"], inplace=True, ascending=False)
