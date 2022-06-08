@@ -5,6 +5,8 @@ import pandas as pd
 from clustering import viper_utilities as vu
 import checkv, pysam, pybedtools
 from Bio import SeqIO
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 from Bio.Blast.Applications import NcbiblastnCommandline, NcbimakeblastdbCommandline
 
 
@@ -281,7 +283,7 @@ def main():
 
     if viralbed is None and hostbed is None:
         print(f"\nClustering contigs...")
-        clustering(fasta, output, args["threads"], args["pid"], args["cov"])
+        vu.clustering(fasta, output, args["threads"], args["pid"], args["cov"])
         shutil.rmtree("tmp_clustering")
         sys.exit()
 
