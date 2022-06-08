@@ -187,7 +187,9 @@ def main():
             clust_seqs[v].append(k)
 
     print(f"Write fasta file with clustered sequences...")
-    with open(output + "_" + args["pid"] + "-" + args["cov"] + ".fasta", "w") as f:
+    with open(
+        output + "_" + str(args["pid"]) + "-" + str(args["cov"]) + ".fasta", "w"
+    ) as f:
         reinclude_sequences = SeqIO.parse(reinclude_fasta, "fasta")  # generator
         for fasta in reinclude_sequences:
             if fasta.id in clust_seqs.keys():
