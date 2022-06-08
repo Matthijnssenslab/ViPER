@@ -181,7 +181,7 @@ def main():
             for i in v:
                 clust_seqs[i].append(k)
         elif v not in clust_seqs:
-            clust_seqs[v] = list(k)
+            clust_seqs[v] = [k]
         else:
             clust_seqs[v].append(k)
 
