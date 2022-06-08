@@ -76,11 +76,10 @@ def main():
     output = args["output"]
     threads = args["threads"]
 
-    print(f"Clustering sequences...")
     clust_seqs = vu.clustering(cluster_fasta, output, threads, returnDict=True)
 
     print(
-        f"Calculating ANI and coverage of sequences to be reincluded against clustered sequences..."
+        f"\nCalculating ANI and coverage of sequences to be reincluded against clustered sequences..."
     )
     makedb = NcbimakeblastdbCommandline(
         dbtype="nucl", input_file=output + ".fasta", out="blastdb/" + output + "_db"
@@ -134,7 +133,7 @@ def main():
         name, sequence = fasta.id, str(fasta.seq)
         fasta_length_dictionary[name] = len(sequence)
 
-    print(f"Add sequences with possible duplications...")
+    print(f"\nAdd sequences with possible duplications...")
     qcov_dict = {}
     for contig in qcov85:
         data = []
@@ -186,7 +185,7 @@ def main():
         else:
             clust_seqs[v].append(k)
 
-    print(f"Write fasta file with clustered sequences...")
+    print(f"\nWrite fasta file with clustered sequences...")
     with open(
         output + "_" + str(args["pid"]) + "-" + str(args["cov"]) + ".fasta", "w"
     ) as f:

@@ -216,6 +216,7 @@ def aniclust(
 
 
 def clustering(fasta, output, threads, pid=95, cov=85, returnDict=False):
+    print(f"Clustering sequences...")
     if os.path.exists("blastdb"):
         shutil.rmtree("blastdb")
     os.mkdir("blastdb")
@@ -232,6 +233,7 @@ def clustering(fasta, output, threads, pid=95, cov=85, returnDict=False):
         out=output + ".out",
     )
     makedb()
+    print(f"Running blastn...")
     blastn()
 
     anicalc_df = anicalc(output + ".out")

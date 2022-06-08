@@ -319,7 +319,6 @@ def main():
     reinclude_dict = {k: v for k, v in inclv_dict.items() if k.lstrip(">") in include}
     write_fasta(reinclude_dict, output + "_re-include.fasta")
 
-    print(f"\nClustering contigs...")
     vu.clustering(
         "tmp_clustering/" + output + "_cluster.fasta",
         output,
