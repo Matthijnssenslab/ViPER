@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import os, argparse, textwrap, shutil, sys
+import os, argparse, shutil
 import pandas as pd
 from clustering import viper_utilities as vu
 from Bio import SeqIO
