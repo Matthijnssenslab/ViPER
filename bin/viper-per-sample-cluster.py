@@ -91,6 +91,7 @@ def parse_arguments():
 
 
 def make_bed(contamination, output, minlength, keepBed=False):
+    """Function to generate BED files/dataframes from CheckV contamination output."""
     df = pd.read_csv(contamination, sep="\t", dtype=object)
 
     col_list = ["contig_id", "region_types", "region_lengths", "region_coords_bp"]
@@ -168,12 +169,14 @@ def make_bed(contamination, output, minlength, keepBed=False):
 
 
 def bedtools(bed, fasta):
+    """Function to run bedtools with BED file from string on fasta sequences."""
     a = pybedtools.BedTool(bed, from_string=True)
     a = a.sequence(fi=fasta, name=True)
     return open(a.seqfn).read()
 
 
 def bedtools_fasta_dict(fasta_text):
+    """Function to return a dictionary with fasta sequences from bedtools function."""
     fasta_dict = {}  # make dictionary
     for i in fasta_text.split("\n"):
         if i.startswith(">"):
@@ -187,6 +190,7 @@ def bedtools_fasta_dict(fasta_text):
 
 
 def quality_summary_selection(checkv_summary):
+    """Function to select sequences with duplication/high k-mer warnings as assessed by CheckV."""
     df = pd.read_csv(checkv_summary, sep="\t", dtype={"warnings": "str"})
     df["warnings"] = df["warnings"].fillna("")  # find faster way to get rid of Nan
 
@@ -210,6 +214,7 @@ def quality_summary_selection(checkv_summary):
 
 
 def write_fasta(dictionary, name):
+    """Function to write fasta file from dictionary."""
     wrapper = textwrap.TextWrapper(width=60)
     with open(name, "w") as fh:
         for k, v in dictionary.items():
@@ -226,6 +231,7 @@ def write_fasta(dictionary, name):
 
 
 def biopython_fasta(dictionary):
+    """Function to write fasta file from biopython dictionary."""
     biopython_dict = {}
     for k, v in dictionary.items():
         k = k.lstrip(">")

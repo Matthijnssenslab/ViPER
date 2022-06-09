@@ -103,6 +103,7 @@ def compute_cov(alns):
 
 
 def anicalc(blast_input, pid=90, length=0):
+    """Function to calculate average nucleotide identity from blast output."""
     with open(blast_input, "r") as input:
         anicalc_dict = {}
         index = 0
@@ -144,6 +145,7 @@ def parse_seqs(path):
 def aniclust(
     fasta, anicalc_df, minlength=0, min_qcov=0, min_tcov=85, min_ani=95  # outname,
 ):
+    """Function to cluster sequences based on given percentage identity and minimum coverage."""
     # list seqs, sorted by length
     print("\nreading sequences...")
     seqs = {}
@@ -216,7 +218,8 @@ def aniclust(
 
 
 def clustering(fasta, output, threads, pid=95, cov=85, returnDict=False):
-    print(f"Clustering sequences...")
+    """Function to cluster fasta sequences based on a percentage identity and minimum coverage and write cluster representatives to a fasta file."""
+    print(f"Clustering sequences:")
     if os.path.exists("blastdb"):
         shutil.rmtree("blastdb")
     os.mkdir("blastdb")
