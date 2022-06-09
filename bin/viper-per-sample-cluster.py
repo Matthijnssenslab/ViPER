@@ -7,7 +7,6 @@ import checkv, pysam, pybedtools
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
-from Bio.Blast.Applications import NcbiblastnCommandline, NcbimakeblastdbCommandline
 
 
 def parse_arguments():
