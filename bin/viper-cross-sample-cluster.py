@@ -1,10 +1,21 @@
 #!/usr/bin/env python3
 
-import os, argparse, shutil
+import os, argparse, shutil, logging
 import pandas as pd
 from clustering import viper_utilities as vu
 from Bio import SeqIO
 from Bio.Blast.Applications import NcbiblastnCommandline, NcbimakeblastdbCommandline
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+formatter = logging.Formatter(
+    fmt="[%(asctime)s] %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+)
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(formatter)
+
+logger.addHandler(stream_handler)
 
 
 def parse_arguments():
@@ -78,8 +89,8 @@ def main():
 
     clust_seqs = vu.clustering(cluster_fasta, output, threads, returnDict=True)
 
-    print(
-        f"\nCalculating ANI and coverage of sequences to be reincluded against clustered sequences..."
+    logger.info(
+        f"Calculating ANI and coverage of sequences to be reincluded against clustered sequences..."
     )
     makedb = NcbimakeblastdbCommandline(
         dbtype="nucl", input_file=output + ".fasta", out="blastdb/" + output + "_db"
@@ -133,7 +144,7 @@ def main():
         name, sequence = fasta.id, str(fasta.seq)
         fasta_length_dictionary[name] = len(sequence)
 
-    print(f"\nAdd sequences with possible duplications...")
+    logger.info(f"Add sequences with possible duplications...")
     qcov_dict = {}
     for contig in qcov85:
         data = []
@@ -147,7 +158,7 @@ def main():
         subset = {key: fasta_length_dictionary[key] for key in data}
         qcov_dict[contig] = max(subset, key=subset.get)
 
-    print(f"Add possible chimeric sequences...")
+    logger.info(f"Add possible chimeric sequences...")
     tcov_dict = {}
     for contig in tcov85:
         data = []
@@ -169,7 +180,7 @@ def main():
             qcov_sum = df["qcov"].sum()
         tcov_dict[contig] = df["tname"].tolist()
 
-    print(f"Add singleton sequences...")
+    logger.info(f"Add singleton sequences...")
     single_dict = {}
     for contig in singletons:
         single_dict[contig] = contig
@@ -185,7 +196,7 @@ def main():
         else:
             clust_seqs[v].append(k)
 
-    print(f"\nWrite fasta file with clustered sequences...")
+    logger.info(f"Write fasta file with clustered sequences...")
     with open(
         output + "_" + str(args["pid"]) + "-" + str(args["cov"]) + ".fasta", "w"
     ) as f:
@@ -199,7 +210,9 @@ def main():
             if fasta.id in clust_seqs.keys():
                 SeqIO.write(fasta, f, "fasta")
 
-    print(f"Write file with clusters and their respective cluster representatives...")
+    logger.info(
+        f"Write file with clusters and their respective cluster representatives..."
+    )
     with open(output + "_cluster_representatives.txt", "w") as out:
         for seq_id, mem_ids in clust_seqs.items():
             out.write(seq_id + "\t" + ",".join(mem_ids) + "\n")

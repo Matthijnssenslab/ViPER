@@ -1,12 +1,23 @@
 #!/usr/bin/env python3
 
-import os, argparse, textwrap, shutil, sys
+import os, argparse, textwrap, shutil, sys, logging
 import pandas as pd
 from clustering import viper_utilities as vu
 import checkv, pysam, pybedtools
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+formatter = logging.Formatter(
+    fmt="[%(asctime)s] %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+)
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(formatter)
+
+logger.addHandler(stream_handler)
 
 
 def parse_arguments():
@@ -100,8 +111,8 @@ def make_bed(contamination, output, minlength, keepBed=False):
     contamination_list = ["viral,host", "host,viral", "host,viral,host"]
 
     if not df1.loc[~df1["region_types"].isin(contamination_list)].empty:
-        print(f"WARNING: Other types of contamination:")
-        print(*df1["contig_id"].values, sep="\n")
+        logger.warning("Other types of contamination:")
+        logger.warning(*df1["contig_id"].values, sep="\n")
     df1 = df1.loc[df1["region_types"].isin(contamination_list)]
 
     df2 = pd.concat(
@@ -120,7 +131,7 @@ def make_bed(contamination, output, minlength, keepBed=False):
             df2[i]
         except:
             if i == 0:
-                print(f"No contamination in contigs.")
+                logger.info("No contamination in contigs.")
         else:
             tmpdf = pd.concat([df2["contig_id"], df2[i]], axis=1)
             tmpdf.columns = col_list
@@ -223,8 +234,8 @@ def write_fasta(dictionary, name):
                 for i in text_list:
                     fh.write(i + "\n")
             else:
-                print(
-                    "ERROR: dictionary key does not start with >, your fasta file might be misformatted."
+                logger.error(
+                    "Dictionary key does not start with >, your fasta file might be misformatted."
                 )
                 sys.exit()
 
@@ -257,7 +268,7 @@ def main():
         "remove_tmp": True,
     }
 
-    print(f"Running CheckV...")
+    logger.info(f"Running CheckV...")
 
     checkv.end_to_end.main(checkv_arguments)
 
@@ -267,17 +278,17 @@ def main():
     minlength = args["length"]
     bed = args["bed"]
 
-    print(f"\nMaking BED files...")
+    logger.info("Making BED files...")
 
     viralbed, hostbed = make_bed(contamination, output, minlength, keepBed=bed)
 
     if viralbed is None and hostbed is None:
-        print(f"\nClustering contigs...")
+        logger.info(f"\nClustering contigs...")
         vu.clustering(fasta, output, args["threads"], args["pid"], args["cov"])
         shutil.rmtree("tmp_clustering")
         sys.exit()
 
-    print(f"Splitting host sequence from viral contigs...")
+    logger.info(f"Splitting host sequence from viral contigs...")
     pysam.faidx(fasta)
     host = bedtools(hostbed.to_csv(header=None, index=False, sep="\t"), fasta)
     viral = bedtools(viralbed.to_csv(header=None, index=False, sep="\t"), fasta)
@@ -285,7 +296,7 @@ def main():
     hdict = bedtools_fasta_dict(host)
     vdict = bedtools_fasta_dict(viral)
 
-    print(
+    logger.info(
         f"Excluding contigs with contamination, longer than expected and duplication issues..."
     )
     include, exclude = quality_summary_selection(qsummary)
@@ -317,7 +328,7 @@ def main():
     cluster_dict = {**clean_v_dict, **hdict, **clean_fasta_dict}
     write_fasta(cluster_dict, "tmp_clustering/" + output + "_cluster.fasta")
 
-    print(
+    logger.info(
         f"Writing fasta file with contigs to re-include after cross-sample clustering..."
     )
     inclv_dict = {**vdict, **fasta_seqs}

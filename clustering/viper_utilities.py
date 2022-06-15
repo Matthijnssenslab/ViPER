@@ -1,7 +1,18 @@
-import os, shutil, gzip
+import os, shutil, gzip, logging
 import pandas as pd
 from Bio import SeqIO
 from Bio.Blast.Applications import NcbiblastnCommandline, NcbimakeblastdbCommandline
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+formatter = logging.Formatter(
+    fmt="[%(asctime)s] %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+)
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(formatter)
+
+logger.addHandler(stream_handler)
 
 # CheckV Copyright (c) 2020, The Regents of the University of California,
 # through Lawrence Berkeley National Laboratory (subject to receipt of
@@ -147,7 +158,7 @@ def aniclust(
 ):
     """Function to cluster sequences based on given percentage identity and minimum coverage."""
     # list seqs, sorted by length
-    print("\nreading sequences...")
+    logger.info("reading sequences...")
     seqs = {}
 
     for index, r in enumerate(parse_seqs(fasta)):
@@ -158,10 +169,10 @@ def aniclust(
             seqs[id] = len(seq)
 
     seqs = [x[0] for x in sorted(seqs.items(), key=lambda x: x[1], reverse=True)]
-    print("%s sequences retained from fna" % len(seqs))
+    logger.info(f"%s sequences retained from fna" % len(seqs))
 
     # store edges
-    print("\nstoring edges...")
+    logger.info("storing edges...")
     num_edges = 0
     edges = {x: [] for x in seqs}
 
@@ -178,11 +189,11 @@ def aniclust(
         edges[row["qname"]].append(row["tname"])
         num_edges += 1
 
-    print("%s edges retained from blastani" % num_edges)
-    print("%s edges currently stored" % sum([len(_) for _ in edges.values()]))
+    logger.info(f"%s edges retained from blastani" % num_edges)
+    logger.info(f"%s edges currently stored" % sum([len(_) for _ in edges.values()]))
 
     # cluster
-    print("\nclustering...")
+    logger.info("clustering...")
 
     clust_to_seqs = {}
     seq_to_clust = {}
@@ -202,10 +213,10 @@ def aniclust(
                     clust_to_seqs[seq_id].append(mem_id)
                     seq_to_clust[mem_id] = seq_id
 
-    print("%s total clusters" % len(clust_to_seqs))
+    logger.info(f"%s total clusters" % len(clust_to_seqs))
 
     # write
-    print("\nwriting clusters...")
+    logger.info("writing clusters...")
     # keep = set()
     # for seq_id, mem_ids in clust_to_seqs.items():
     #    keep.add(seq_id)
@@ -219,7 +230,7 @@ def aniclust(
 
 def clustering(fasta, output, threads, pid=95, cov=85, returnDict=False):
     """Function to cluster fasta sequences based on a percentage identity and minimum coverage and write cluster representatives to a fasta file."""
-    print(f"Clustering sequences:")
+    logger.info(f"Clustering sequences:")
     if os.path.exists("blastdb"):
         shutil.rmtree("blastdb")
     os.mkdir("blastdb")
@@ -236,7 +247,7 @@ def clustering(fasta, output, threads, pid=95, cov=85, returnDict=False):
         out=output + ".out",
     )
     makedb()
-    print(f"Running blastn...")
+    logger.info(f"Running blastn...")
     blastn()
 
     anicalc_df = anicalc(output + ".out")
