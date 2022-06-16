@@ -34,7 +34,9 @@ def get_logger():
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.DEBUG)
     console_handler.setFormatter(
-        logging.Formatter(fmt="%(name)s %(levelname)-8s: %(message)s")
+        logging.Formatter(
+            fmt="[%(asctime)s] %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+        )
     )
 
     # Create a "blank line" handler
