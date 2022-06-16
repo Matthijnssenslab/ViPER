@@ -1,19 +1,57 @@
-import os, shutil, gzip, logging
+import os, shutil, gzip, logging, types
 import pandas as pd
 from Bio import SeqIO
 from Bio.Blast.Applications import NcbiblastnCommandline, NcbimakeblastdbCommandline
 
 
+# def get_logger():
+#     logger = logging.getLogger(__name__)
+#     logger.setLevel(logging.INFO)
+#     formatter = logging.Formatter(
+#         fmt="[%(asctime)s] %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+#     )
+#     stream_handler = logging.StreamHandler()
+#     stream_handler.setFormatter(formatter)
+#     logger.handlers.clear()
+#     logger.addHandler(stream_handler)
+#     return logger
+
+
+def log_newline(self, how_many_lines=1):
+    # Switch handler, output a blank line
+    self.removeHandler(self.console_handler)
+    self.addHandler(self.blank_handler)
+    for i in range(how_many_lines):
+        self.info("")
+
+    # Switch back
+    self.removeHandler(self.blank_handler)
+    self.addHandler(self.console_handler)
+
+
 def get_logger():
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.INFO)
-    formatter = logging.Formatter(
-        fmt="[%(asctime)s] %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+    # Create a handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.DEBUG)
+    console_handler.setFormatter(
+        logging.Formatter(fmt="%(name)s %(levelname)-8s: %(message)s")
     )
-    stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(formatter)
-    logger.handlers.clear()
-    logger.addHandler(stream_handler)
+
+    # Create a "blank line" handler
+    blank_handler = logging.StreamHandler()
+    blank_handler.setLevel(logging.DEBUG)
+    blank_handler.setFormatter(logging.Formatter(fmt=""))
+
+    # Create a logger, with the previously-defined handler
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
+    logger.addHandler(console_handler)
+
+    # Save some data and add a method to logger object
+    logger.console_handler = console_handler
+    logger.blank_handler = blank_handler
+    logger.newline = types.MethodType(log_newline, logger)
+
     return logger
 
 

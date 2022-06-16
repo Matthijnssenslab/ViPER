@@ -135,6 +135,7 @@ def main():
         name, sequence = fasta.id, str(fasta.seq)
         fasta_length_dictionary[name] = len(sequence)
 
+    logger.newline()
     logger.info(f"Add sequences with possible duplications...")
     qcov_dict = {}
     for contig in qcov85:
@@ -149,6 +150,7 @@ def main():
         subset = {key: fasta_length_dictionary[key] for key in data}
         qcov_dict[contig] = max(subset, key=subset.get)
 
+    logger.newline()
     logger.info(f"Add possible chimeric sequences...")
     tcov_dict = {}
     for contig in tcov85:
@@ -171,6 +173,7 @@ def main():
             qcov_sum = df["qcov"].sum()
         tcov_dict[contig] = df["tname"].tolist()
 
+    logger.newline()
     logger.info(f"Add singleton sequences...")
     single_dict = {}
     for contig in singletons:
@@ -187,6 +190,7 @@ def main():
         else:
             clust_seqs[v].append(k)
 
+    logger.newline()
     logger.info(f"Write fasta file with clustered sequences...")
     with open(
         output + "_" + str(args["pid"]) + "-" + str(args["cov"]) + ".fasta", "w"
@@ -201,8 +205,9 @@ def main():
             if fasta.id in clust_seqs.keys():
                 SeqIO.write(fasta, f, "fasta")
 
+    logger.newline()
     logger.info(
-        f"Write file with clusters and their respective cluster representatives..."
+        f"Write file witlogger.newline() clusters and their respective cluster representatives..."
     )
     with open(output + "_cluster_representatives.txt", "w") as out:
         for seq_id, mem_ids in clust_seqs.items():

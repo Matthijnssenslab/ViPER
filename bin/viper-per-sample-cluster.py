@@ -273,16 +273,19 @@ def main():
     minlength = args["length"]
     bed = args["bed"]
 
-    logger.info(f"\nMaking BED files...")
+    logger.newline()
+    logger.info(f"Making BED files...")
 
     viralbed, hostbed = make_bed(contamination, output, minlength, keepBed=bed)
 
     if viralbed is None and hostbed is None:
+        logger.newline()
         logger.info(f"Clustering contigs...")
         vu.clustering(fasta, output, args["threads"], args["pid"], args["cov"])
         shutil.rmtree("tmp_clustering")
         sys.exit()
 
+    logger.newline()
     logger.info(f"Splitting host sequence from viral contigs...")
     pysam.faidx(fasta)
     host = bedtools(hostbed.to_csv(header=None, index=False, sep="\t"), fasta)
@@ -323,6 +326,7 @@ def main():
     cluster_dict = {**clean_v_dict, **hdict, **clean_fasta_dict}
     write_fasta(cluster_dict, "tmp_clustering/" + output + "_cluster.fasta")
 
+    logger.newline()
     logger.info(
         f"\nWriting fasta file with contigs to re-include after cross-sample clustering..."
     )
