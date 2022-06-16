@@ -80,6 +80,7 @@ def main():
 
     clust_seqs = vu.clustering(cluster_fasta, output, threads, returnDict=True)
 
+    logger.newline()
     logger.info(
         f"Calculating ANI and coverage of sequences to be reincluded against clustered sequences..."
     )
@@ -150,7 +151,6 @@ def main():
         subset = {key: fasta_length_dictionary[key] for key in data}
         qcov_dict[contig] = max(subset, key=subset.get)
 
-    logger.newline()
     logger.info(f"Add possible chimeric sequences...")
     tcov_dict = {}
     for contig in tcov85:
@@ -173,7 +173,6 @@ def main():
             qcov_sum = df["qcov"].sum()
         tcov_dict[contig] = df["tname"].tolist()
 
-    logger.newline()
     logger.info(f"Add singleton sequences...")
     single_dict = {}
     for contig in singletons:
@@ -205,9 +204,8 @@ def main():
             if fasta.id in clust_seqs.keys():
                 SeqIO.write(fasta, f, "fasta")
 
-    logger.newline()
     logger.info(
-        f"Write file witlogger.newline() clusters and their respective cluster representatives..."
+        f"Write file with clusters and their respective cluster representatives..."
     )
     with open(output + "_cluster_representatives.txt", "w") as out:
         for seq_id, mem_ids in clust_seqs.items():

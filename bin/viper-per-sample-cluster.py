@@ -280,7 +280,6 @@ def main():
 
     if viralbed is None and hostbed is None:
         logger.newline()
-        logger.info(f"Clustering contigs...")
         vu.clustering(fasta, output, args["threads"], args["pid"], args["cov"])
         shutil.rmtree("tmp_clustering")
         sys.exit()
@@ -328,7 +327,7 @@ def main():
 
     logger.newline()
     logger.info(
-        f"\nWriting fasta file with contigs to re-include after cross-sample clustering..."
+        f"Writing fasta file with contigs to re-include after cross-sample clustering..."
     )
     inclv_dict = {**vdict, **fasta_seqs}
     reinclude_dict = {k: v for k, v in inclv_dict.items() if k.lstrip(">") in include}

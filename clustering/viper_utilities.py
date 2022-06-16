@@ -47,6 +47,7 @@ def get_logger():
     # Create a logger, with the previously-defined handler
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
+    logger.handlers.clear()
     logger.addHandler(console_handler)
 
     # Save some data and add a method to logger object
