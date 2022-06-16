@@ -8,16 +8,7 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-
-formatter = logging.Formatter(
-    fmt="[%(asctime)s] %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
-)
-stream_handler = logging.StreamHandler()
-stream_handler.setFormatter(formatter)
-
-logger.addHandler(stream_handler)
+logger = vu.get_logger()
 
 
 def parse_arguments():
@@ -111,9 +102,13 @@ def make_bed(contamination, output, minlength, keepBed=False):
     contamination_list = ["viral,host", "host,viral", "host,viral,host"]
 
     if not df1.loc[~df1["region_types"].isin(contamination_list)].empty:
-        logger.warning("Other types of contamination:")
-        logger.warning(*df1["contig_id"].values, sep="\n")
+        logger.warninf("Other types of contamination:")
+        print(*df1["contig_id"].values, sep="\n")
     df1 = df1.loc[df1["region_types"].isin(contamination_list)]
+
+    if df1.empty:
+        logger.info(f"No proviruses found.")
+        return None, None
 
     df2 = pd.concat(
         [
@@ -237,7 +232,7 @@ def write_fasta(dictionary, name):
                 logger.error(
                     "Dictionary key does not start with >, your fasta file might be misformatted."
                 )
-                sys.exit()
+                sys.exit(1)
 
 
 def biopython_fasta(dictionary):
@@ -278,12 +273,12 @@ def main():
     minlength = args["length"]
     bed = args["bed"]
 
-    logger.info("Making BED files...")
+    logger.info(f"\nMaking BED files...")
 
     viralbed, hostbed = make_bed(contamination, output, minlength, keepBed=bed)
 
     if viralbed is None and hostbed is None:
-        logger.info(f"\nClustering contigs...")
+        logger.info(f"Clustering contigs...")
         vu.clustering(fasta, output, args["threads"], args["pid"], args["cov"])
         shutil.rmtree("tmp_clustering")
         sys.exit()
@@ -329,7 +324,7 @@ def main():
     write_fasta(cluster_dict, "tmp_clustering/" + output + "_cluster.fasta")
 
     logger.info(
-        f"Writing fasta file with contigs to re-include after cross-sample clustering..."
+        f"\nWriting fasta file with contigs to re-include after cross-sample clustering..."
     )
     inclv_dict = {**vdict, **fasta_seqs}
     reinclude_dict = {k: v for k, v in inclv_dict.items() if k.lstrip(">") in include}

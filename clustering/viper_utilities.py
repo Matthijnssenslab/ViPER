@@ -3,16 +3,21 @@ import pandas as pd
 from Bio import SeqIO
 from Bio.Blast.Applications import NcbiblastnCommandline, NcbimakeblastdbCommandline
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
-formatter = logging.Formatter(
-    fmt="[%(asctime)s] %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
-)
-stream_handler = logging.StreamHandler()
-stream_handler.setFormatter(formatter)
+def get_logger():
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
+    formatter = logging.Formatter(
+        fmt="[%(asctime)s] %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+    )
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
+    logger.handlers.clear()
+    logger.addHandler(stream_handler)
+    return logger
 
-logger.addHandler(stream_handler)
+
+logger = get_logger()
 
 # CheckV Copyright (c) 2020, The Regents of the University of California,
 # through Lawrence Berkeley National Laboratory (subject to receipt of

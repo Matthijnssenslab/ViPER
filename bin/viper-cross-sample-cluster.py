@@ -6,17 +6,6 @@ from clustering import viper_utilities as vu
 from Bio import SeqIO
 from Bio.Blast.Applications import NcbiblastnCommandline, NcbimakeblastdbCommandline
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-
-formatter = logging.Formatter(
-    fmt="[%(asctime)s] %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
-)
-stream_handler = logging.StreamHandler()
-stream_handler.setFormatter(formatter)
-
-logger.addHandler(stream_handler)
-
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
@@ -86,6 +75,8 @@ def main():
     reinclude_fasta = args["reinclude_fasta"]
     output = args["output"]
     threads = args["threads"]
+
+    logger = vu.get_logger()
 
     clust_seqs = vu.clustering(cluster_fasta, output, threads, returnDict=True)
 
