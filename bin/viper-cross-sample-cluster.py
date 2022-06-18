@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 
-import os, argparse, shutil, logging
+import argparse
+import logging
+import os
+import shutil
+
 import pandas as pd
-from clustering import viper_utilities as vu
 from Bio import SeqIO
 from Bio.Blast.Applications import NcbiblastnCommandline, NcbimakeblastdbCommandline
+from clustering import viper_utilities as vu
 
 
 def parse_arguments():

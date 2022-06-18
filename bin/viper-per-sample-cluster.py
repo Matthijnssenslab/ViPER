@@ -1,12 +1,20 @@
 #!/usr/bin/env python3
 
-import os, argparse, textwrap, shutil, sys, logging
+import argparse
+import logging
+import os
+import shutil
+import sys
+import textwrap
+
+import checkv
 import pandas as pd
-from clustering import viper_utilities as vu
-import checkv, pysam, pybedtools
+import pybedtools
+import pysam
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
+from clustering import viper_utilities as vu
 
 logger = vu.get_logger()
 

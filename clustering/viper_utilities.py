@@ -1,8 +1,12 @@
-import os, shutil, gzip, logging, types
+import gzip
+import logging
+import os
+import shutil
+import types
+
 import pandas as pd
 from Bio import SeqIO
 from Bio.Blast.Applications import NcbiblastnCommandline, NcbimakeblastdbCommandline
-
 
 # def get_logger():
 #     logger = logging.getLogger(__name__)
