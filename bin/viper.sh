@@ -489,11 +489,11 @@ if [[ $unpaired -eq 1 ]]; then
 	unpaired_name=$(get_name "$unpaired_path")
 fi
 
+#Test if there is a common prefix
 if [[ -z "$sample" ]]; then
 	sample=$(common_prefix "$read1" "$read2")
 fi
 
-#Test if there is a common prefix
 if [[ -z "$sample" ]]; then
       >&2 printf '\n%s\n' "[$(date "+%F %H:%M")] WARNING: No common prefix found between reads, continuing with date and timestamp as name. You might want to check if forward and reverse reads are from the same sample."
       sample=$(date "+%Y%m%d-%H_%M_%S")
