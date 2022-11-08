@@ -69,6 +69,7 @@ OPTIONAL:
    --cluster-cover		% of the shortest sequence that should be covered during clustering. (default: 85)
    --cluster-identity		% of ANI for clustering scaffolds. (default: 95)
    --memory-limit		Memory (in GB) to be reserved for SPAdes assembly. (default: autodetected by SPAdes)
+   !!!! --checkv-db
 
  Classification:
    -d | --diamond-path		Path to diamond database. If not given, Diamond and KronaTools will be skipped.
@@ -516,11 +517,11 @@ if [[ $unpaired -eq 1 ]]; then
 	unpaired_name=$(get_name "$unpaired_path")
 fi
 
+#Test if there is a common prefix
 if [[ -z "$sample" ]]; then
 	sample=$(common_prefix "$read1" "$read2")
 fi
 
-#Test if there is a common prefix
 if [[ -z "$sample" ]]; then
       >&2 printf '\n%s\n\n' "[WARNING]: No common prefix found between reads, continuing with date and timestamp as name. You might want to check if forward and reverse reads are from the same sample."
       sample=$(date "+%Y%m%d-%H_%M_%S")
@@ -804,29 +805,33 @@ if [[ $triple -eq 1 ]]; then
 	seqkit seq -m "$minlength" -j "$threads" "$sample"_all.scaffolds.fasta > "$sample"_"$minlength".scaffolds.fasta
 	seqkit sort --by-length --reverse -o "$sample"_"$minlength".scaffolds.fasta "$sample"_"$minlength".scaffolds.fasta
 	printf '\n%s\n\n' "[INFO]: Clustering scaffolds on "$cluster_identity"% identity over "$cluster_cover"% of the length."
+
 	#Cluster_genomes.pl -f "$sample"_"$minlength".scaffolds.fasta -c "$cluster_cover" -i "$cluster_identity" -t "$threads"
 	mkdir clustering
-	makeblastdb -in "$sample"_"$minlength".scaffolds.fasta -dbtype nucl -out clustering/"$sample"_"$minlength"
-	if [[ ! $? -eq 0 ]]; then
-		>&2 printf '\n%s\n\n' "[ERROR]: Failed to make blastdb for clustering."
-		exit 1
-	fi
-	blastn -query "$sample"_"$minlength".scaffolds.fasta -db clustering/"$sample"_"$minlength" -outfmt '6 std qlen slen' -max_target_seqs 10000 -perc_identity "$blastn_pid" -out clustering/"$sample"_"$minlength".tsv -num_threads "$threads"
-	anicalc.py -i clustering/"$sample"_"$minlength".tsv -o clustering/"$sample"_"$minlength"_ani.tsv
-	if [[ ! $? -eq 0 ]]; then
-		>&2 printf '\n%s\n\n' "[ERROR]: Failed to calculate ANI for clustering."
-		exit 1
-	fi
-	aniclust.py --fna "$sample"_"$minlength".scaffolds.fasta --ani clustering/"$sample"_"$minlength"_ani.tsv --out "$sample"_"$minlength"_clusters.tsv --min_ani "$cluster_identity" --min_qcov 0 --min_tcov "$cluster_cover"
-	mv "$sample"_"$minlength".scaffolds.fasta "$sample"_"$minlength"-unclustered.scaffolds.fasta
-	cut -f1 "$sample"_"$minlength"_clusters.tsv > "$sample"_cluster_representatives.txt
-	seqkit grep -j "$threads" -f "$sample"_cluster_representatives.txt -n -o "$sample"_"$minlength".scaffolds.fasta "$sample"_"$minlength"-unclustered.scaffolds.fasta
-	seqkit sort --by-length --reverse -o "$sample"_"$minlength".scaffolds.fasta "$sample"_"$minlength".scaffolds.fasta
+
+	viper-per-sample-cluster.py -i "$sample"_"$minlength".scaffolds.fasta -d "$checkv_db" -o clustering/"$sample"_"$minlength" -t "$threads" --min-identity "$cluster_identity" --min-coverage "$cluster_cover"
+	#makeblastdb -in "$sample"_"$minlength".scaffolds.fasta -dbtype nucl -out clustering/"$sample"_"$minlength"
+	#if [[ ! $? -eq 0 ]]; then
+	#	>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: Failed to make blastdb for clustering."
+	#	exit 1
+	#fi
+	#blastn -query "$sample"_"$minlength".scaffolds.fasta -db clustering/"$sample"_"$minlength" -outfmt '6 std qlen slen' -max_target_seqs 10000 -perc_identity "$blastn_pid" -out clustering/"$sample"_"$minlength".tsv -num_threads "$threads"
+	#anicalc.py -i clustering/"$sample"_"$minlength".tsv -o clustering/"$sample"_"$minlength"_ani.tsv
+	#if [[ $? -eq 0 ]]; then
+	#	aniclust.py --fna "$sample"_"$minlength".scaffolds.fasta --ani clustering/"$sample"_"$minlength"_ani.tsv --out "$sample"_"$minlength"_clusters.tsv --min_ani "$cluster_identity" --min_qcov 0 --min_tcov "$cluster_cover"
+	#	mv "$sample"_"$minlength".scaffolds.fasta "$sample"_"$minlength"-unclustered.scaffolds.fasta
+	#	cut -f1 "$sample"_"$minlength"_clusters.tsv > "$sample"_cluster_representatives.txt
+	#	seqkit grep -j "$threads" -f "$sample"_cluster_representatives.txt -n -o "$sample"_"$minlength".scaffolds.fasta "$sample"_"$minlength"-unclustered.scaffolds.fasta
+	#	seqkit sort --by-length --reverse -o "$sample"_"$minlength".scaffolds.fasta "$sample"_"$minlength".scaffolds.fasta
+	#else
+	#	printf '\n%s\n' "[$(date "+%F %H:%M")] WARNING: Failed to calculate ANI for clustering: continuing with all scaffolds larger than "$minlength"bp."
+	#fi
 else
 	cp ASSEMBLY/"$sample".scaffolds.fasta SCAFFOLDS/
 	cd SCAFFOLDS/
 	printf '\n%s\n\n' "[INFO]: Filtering scaffolds larger than "$minlength"bp."
 	seqkit seq -m "$minlength" -j "$threads" "$sample".scaffolds.fasta > "$sample"_"$minlength".scaffolds.fasta
+	viper-per-sample-cluster.py -i "$sample"_"$minlength".scaffolds.fasta -d "$checkv_db" -o "$sample"_"$minlength" -t "$threads"
 fi
 
 scaffolds="$sample"_"$minlength".scaffolds.fasta
