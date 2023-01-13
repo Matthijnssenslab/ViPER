@@ -258,7 +258,7 @@ def main():
     args = parse_arguments()
     fasta = args["fasta"]
 
-    tmp = tempfile.TemporaryDirectory(dir=".")
+    tmpdir = tempfile.mkdtemp(dir=".")
     # if os.path.exists("tmp_clustering"):
     #    shutil.rmtree("tmp_clustering")
     #
@@ -267,7 +267,7 @@ def main():
     checkv_arguments = {
         "input": fasta,
         "db": args["db"],
-        "output": tmp.name,
+        "output": tmpdir,
         "threads": args["threads"],
         "restart": True,
         "quiet": False,
@@ -278,7 +278,6 @@ def main():
 
     checkv.end_to_end.main(checkv_arguments)
 
-    tmpdir = tmp.name
     contamination = tmpdir + "/checkv/contamination.tsv"
     qsummary = tmpdir + "/checkv/quality_summary.tsv"
     output = args["output"]
