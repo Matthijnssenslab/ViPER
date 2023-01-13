@@ -335,7 +335,7 @@ def main():
     }
 
     cluster_dict = {**clean_v_dict, **hdict, **clean_fasta_dict}
-    write_fasta(cluster_dict, "tmp_clustering/" + output + "_cluster.fasta")
+    write_fasta(cluster_dict, tmpdir + "/" + output + "_cluster.fasta")
 
     logger.newline()
     logger.info(
@@ -346,7 +346,7 @@ def main():
     write_fasta(reinclude_dict, output + "_re-include.fasta")
 
     vu.clustering(
-        "tmp_clustering/" + output + "_cluster.fasta",
+        tmpdir + "/" + output + "_cluster.fasta",
         output,
         args["threads"],
         args["pid"],
