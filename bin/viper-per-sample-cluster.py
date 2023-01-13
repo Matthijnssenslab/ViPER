@@ -278,8 +278,8 @@ def main():
 
     checkv.end_to_end.main(checkv_arguments)
 
-    contamination = tmpdir + "/checkv/contamination.tsv"
-    qsummary = tmpdir + "/checkv/quality_summary.tsv"
+    contamination = tmpdir + "/contamination.tsv"
+    qsummary = tmpdir + "/quality_summary.tsv"
     output = args["output"]
     minlength = args["length"]
     bed = args["bed"]
