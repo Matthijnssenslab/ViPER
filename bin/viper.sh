@@ -66,7 +66,7 @@ OPTIONAL:
    --cluster-cover		% of the shortest sequence that should be covered during clustering. (default: 85)
    --cluster-identity		% of ANI for clustering scaffolds. (default: 95)
    --memory-limit		Memory (in GB) to be reserved for SPAdes assembly. (default: autodetected by SPAdes)
-   !!!! --checkv-db
+   !!!! --checkv-db + check if database is given and valid 
 
  Classification:
    -d | --diamond-path		Path to diamond database. If not given, Diamond and KronaTools will be skipped.
