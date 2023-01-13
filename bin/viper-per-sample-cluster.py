@@ -292,7 +292,7 @@ def main():
     if viralbed is None and hostbed is None:
         logger.newline()
         vu.clustering(fasta, output, args["threads"], args["pid"], args["cov"])
-        tmp.cleanup()
+        tmpdir.cleanup()
         sys.exit()
 
     logger.newline()
@@ -353,7 +353,7 @@ def main():
     )
 
     # shutil.rmtree("tmp_clustering")
-    tmp.cleanup()
+    tmpdir.cleanup()
     os.remove(fasta + ".fai")
 
 
