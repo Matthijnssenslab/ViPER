@@ -5,6 +5,7 @@ import logging
 import os
 import shutil
 import sys
+import tempfile
 import textwrap
 
 import checkv
@@ -14,6 +15,7 @@ import pysam
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
+
 from clustering import viper_utilities as vu
 
 logger = vu.get_logger()
@@ -256,15 +258,16 @@ def main():
     args = parse_arguments()
     fasta = args["fasta"]
 
-    if os.path.exists("tmp_clustering"):
-        shutil.rmtree("tmp_clustering")
-
-    os.mkdir("tmp_clustering")
+    tmp = tempfile.TemporaryDirectory()
+    # if os.path.exists("tmp_clustering"):
+    #    shutil.rmtree("tmp_clustering")
+    #
+    # os.mkdir("tmp_clustering")
 
     checkv_arguments = {
         "input": fasta,
         "db": args["db"],
-        "output": "tmp_clustering/checkv",
+        "output": tmp.name,
         "threads": args["threads"],
         "restart": True,
         "quiet": False,
@@ -349,7 +352,8 @@ def main():
         args["cov"],
     )
 
-    shutil.rmtree("tmp_clustering")
+    # shutil.rmtree("tmp_clustering")
+    tmp.cleanup()
     os.remove(fasta + ".fai")
 
 
