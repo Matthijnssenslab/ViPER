@@ -258,7 +258,7 @@ def main():
     args = parse_arguments()
     fasta = args["fasta"]
 
-    tmp = tempfile.TemporaryDirectory()
+    tmp = tempfile.TemporaryDirectory(dir=".")
     # if os.path.exists("tmp_clustering"):
     #    shutil.rmtree("tmp_clustering")
     #
@@ -278,8 +278,9 @@ def main():
 
     checkv.end_to_end.main(checkv_arguments)
 
-    contamination = "tmp_clustering/checkv/contamination.tsv"
-    qsummary = "tmp_clustering/checkv/quality_summary.tsv"
+    tmpdir = tmp.name
+    contamination = tmpdir + "/checkv/contamination.tsv"
+    qsummary = tmpdir + "/checkv/quality_summary.tsv"
     output = args["output"]
     minlength = args["length"]
     bed = args["bed"]
@@ -292,7 +293,7 @@ def main():
     if viralbed is None and hostbed is None:
         logger.newline()
         vu.clustering(fasta, output, args["threads"], args["pid"], args["cov"])
-        shutil.rmtree("tmp_clustering")
+        tmp.cleanup()
         sys.exit()
 
     logger.newline()
