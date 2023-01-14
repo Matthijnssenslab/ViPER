@@ -337,13 +337,21 @@ def main():
     write_fasta(cluster_dict, tmpdir + "/" + output + "_cluster.fasta")
 
     logger.newline()
-    logger.info(
-        f"Writing fasta file with contigs to re-include after cross-sample clustering..."
-    )
-    inclv_dict = {**vdict, **fasta_seqs}
-    reinclude_dict = {k: v for k, v in inclv_dict.items() if k.lstrip(">") in include}
-    write_fasta(reinclude_dict, output + "_re-include.fasta")
+    if not include:
+        logger.info(
+            f"No duplication issues in sequences, reinclude fasta is not generated."
+        )
+    else:
+        logger.info(
+            f"Writing fasta file with contigs to re-include after cross-sample clustering..."
+        )
+        inclv_dict = {**vdict, **fasta_seqs}
+        reinclude_dict = {
+            k: v for k, v in inclv_dict.items() if k.lstrip(">") in include
+        }
+        write_fasta(reinclude_dict, output + "_re-include.fasta")
 
+    logger.newline()
     vu.clustering(
         tmpdir + "/" + output + "_cluster.fasta",
         output,
