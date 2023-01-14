@@ -318,6 +318,8 @@ def main():
             k: v for k, v in vdict.items() if k.lstrip(">") not in viral_exclude
         }
 
+        os.remove(fasta + ".fai")
+
     fasta_seqs = {}
     with open(fasta, "r") as fh:
         lines = fh.readlines()
@@ -351,7 +353,6 @@ def main():
     )
 
     shutil.rmtree(tmpdir)
-    os.remove(fasta + ".fai")
 
 
 if __name__ == "__main__":
