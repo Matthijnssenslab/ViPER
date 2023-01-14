@@ -217,12 +217,10 @@ def quality_summary_selection(checkv_summary):
     ]
     df_dict = df.to_dict("records")
     for row in df_dict:
-        if row["provirus"] == "Yes" or any(
-            x in row["warnings"] for x in warnings
-        ):  # ['kmer', 'longer']):
+        if row["provirus"] == "Yes" or any(x in row["warnings"] for x in warnings):
             exclude.add(row["contig_id"])
 
-        if any(x in row["warnings"] for x in warnings):  # ['kmer', 'longer']):
+        if any(x in row["warnings"] for x in warnings):
             include.add(row["contig_id"])
 
     return include, exclude
@@ -284,41 +282,41 @@ def main():
     minlength = args["length"]
     bed = args["bed"]
 
-    logger.newline()
-    logger.info(f"Making BED files...")
-
-    viralbed, hostbed = make_bed(contamination, output, minlength, keepBed=bed)
-
-    if viralbed is None and hostbed is None:
-        logger.newline()
-        vu.clustering(fasta, output, args["threads"], args["pid"], args["cov"])
-        shutil.rmtree(tmpdir)
-        sys.exit()
-
-    logger.newline()
-    logger.info(f"Splitting host sequence from viral contigs...")
-    pysam.faidx(fasta)
-    host = bedtools(hostbed.to_csv(header=None, index=False, sep="\t"), fasta)
-    viral = bedtools(viralbed.to_csv(header=None, index=False, sep="\t"), fasta)
-
-    hdict = bedtools_fasta_dict(host)
-    vdict = bedtools_fasta_dict(viral)
-
     logger.info(
         f"Excluding contigs with contamination, longer than expected and duplication issues..."
     )
+
     include, exclude = quality_summary_selection(qsummary)
 
-    viral_exclude = set()
-    for row in viralbed.to_dict("records"):
-        if row["contig_id"] in include:
-            include.remove(row["contig_id"])
-            include.add(row["bed_name"])
-            viral_exclude.add(row["bed_name"])
+    logger.newline()
+    logger.info(f"Making BED for host and viral regions...")
 
-    clean_v_dict = {
-        k: v for k, v in vdict.items() if k.lstrip(">") not in viral_exclude
-    }
+    viralbed, hostbed = make_bed(contamination, output, minlength, keepBed=bed)
+
+    hdict = {}
+    vdict = {}
+    clean_v_dict = {}
+
+    if viralbed is not None and hostbed is not None:
+        logger.newline()
+        logger.info(f"Splitting host sequence from viral contigs...")
+        pysam.faidx(fasta)
+        host = bedtools(hostbed.to_csv(header=None, index=False, sep="\t"), fasta)
+        viral = bedtools(viralbed.to_csv(header=None, index=False, sep="\t"), fasta)
+
+        hdict = bedtools_fasta_dict(host)
+        vdict = bedtools_fasta_dict(viral)
+
+        viral_exclude = set()
+        for row in viralbed.to_dict("records"):
+            if row["contig_id"] in include:
+                include.remove(row["contig_id"])
+                include.add(row["bed_name"])
+                viral_exclude.add(row["bed_name"])
+
+        clean_v_dict = {
+            k: v for k, v in vdict.items() if k.lstrip(">") not in viral_exclude
+        }
 
     fasta_seqs = {}
     with open(fasta, "r") as fh:
