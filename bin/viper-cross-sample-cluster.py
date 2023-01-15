@@ -79,9 +79,13 @@ def main():
     args = parse_arguments()
     cluster_fasta = args["cluster_fasta"]
     reinclude_fasta = args["reinclude_fasta"]
+    threads = args["threads"]
     output = args["output"]
     output_name = Path(args["output"]).name
-    threads = args["threads"]
+    output_dir = Path(args["output"]).parent
+
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
 
     logger = vu.get_logger()
 

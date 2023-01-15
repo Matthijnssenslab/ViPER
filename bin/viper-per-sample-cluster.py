@@ -256,8 +256,14 @@ def biopython_fasta(dictionary):
 def main():
     args = parse_arguments()
     fasta = args["fasta"]
+    output = args["output"]
+    output_name = Path(args["output"]).name
+    output_dir = Path(args["output"]).parent
 
-    tmpdir = tempfile.mkdtemp(dir=".")
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    tmpdir = tempfile.mkdtemp(dir=output_dir)
     # if os.path.exists("tmp_clustering"):
     #    shutil.rmtree("tmp_clustering")
     #
@@ -279,8 +285,6 @@ def main():
 
     contamination = os.path.join(tmpdir, "contamination.tsv")
     qsummary = os.path.join(tmpdir, "quality_summary.tsv")
-    output = args["output"]
-    output_name = Path(args["output"]).name
     minlength = args["length"]
     bed = args["bed"]
 
