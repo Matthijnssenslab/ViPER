@@ -304,12 +304,13 @@ def clustering(fasta, output, threads, pid=95, cov=85, returnDict=False):
 
     aniclust_dict = aniclust(fasta, anicalc_df, min_ani=pid, min_tcov=cov)
 
-    with open(output + ".fasta", "w") as f:
-        for seq in SeqIO.parse(fasta, "fasta"):
-            if seq.id in aniclust_dict.keys():
-                SeqIO.write(seq, f, "fasta")
     shutil.rmtree("blastdb")
     os.remove(output + ".out")
 
     if returnDict:
         return aniclust_dict
+
+    with open(output + ".fasta", "w") as f:
+        for seq in SeqIO.parse(fasta, "fasta"):
+            if seq.id in aniclust_dict.keys():
+                SeqIO.write(seq, f, "fasta")
