@@ -7,6 +7,7 @@ import shutil
 import sys
 import tempfile
 import textwrap
+from pathlib import Path
 
 import checkv
 import pandas as pd
@@ -276,9 +277,10 @@ def main():
 
     checkv.end_to_end.main(checkv_arguments)
 
-    contamination = tmpdir + "/contamination.tsv"
-    qsummary = tmpdir + "/quality_summary.tsv"
+    contamination = os.path.join(tmpdir, "contamination.tsv")
+    qsummary = os.path.join(tmpdir, "quality_summary.tsv")
     output = args["output"]
+    output_name = Path(args["output"]).name
     minlength = args["length"]
     bed = args["bed"]
 
@@ -334,7 +336,7 @@ def main():
     }
 
     cluster_dict = {**clean_v_dict, **hdict, **clean_fasta_dict}
-    write_fasta(cluster_dict, tmpdir + "/" + output + "_cluster.fasta")
+    write_fasta(cluster_dict, os.path.join(tmpdir, output_name + "_cluster.fasta"))
 
     logger.newline()
     if not include:
@@ -353,7 +355,7 @@ def main():
 
     logger.newline()
     vu.clustering(
-        tmpdir + "/" + output + "_cluster.fasta",
+        os.path.join(tmpdir, output_name + "_cluster.fasta"),
         output,
         args["threads"],
         args["pid"],

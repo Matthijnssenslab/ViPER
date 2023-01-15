@@ -4,10 +4,12 @@ import argparse
 import logging
 import os
 import shutil
+from pathlib import Path
 
 import pandas as pd
 from Bio import SeqIO
 from Bio.Blast.Applications import NcbiblastnCommandline, NcbimakeblastdbCommandline
+
 from clustering import viper_utilities as vu
 
 
@@ -78,6 +80,7 @@ def main():
     cluster_fasta = args["cluster_fasta"]
     reinclude_fasta = args["reinclude_fasta"]
     output = args["output"]
+    output_name = Path(args["output"]).name
     threads = args["threads"]
 
     logger = vu.get_logger()
@@ -89,13 +92,15 @@ def main():
         f"Calculating ANI and coverage of sequences to be reincluded against clustered sequences..."
     )
     makedb = NcbimakeblastdbCommandline(
-        dbtype="nucl", input_file=output + ".fasta", out="blastdb/" + output + "_db"
+        dbtype="nucl",
+        input_file=output + ".fasta",
+        out=os.path.join("blastdb", output_name + "_db"),
     )
     makedb()
 
     blastn = NcbiblastnCommandline(
         query=reinclude_fasta,
-        db="blastdb/" + output + "_db",
+        db=os.path.join("blastdb", output_name + "_db"),
         outfmt="6 std qlen slen",
         max_target_seqs=10000,
         perc_identity=90,
