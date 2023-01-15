@@ -3,6 +3,7 @@ import logging
 import os
 import shutil
 import types
+from pathlib import Path
 
 import pandas as pd
 from Bio import SeqIO
@@ -285,11 +286,13 @@ def clustering(fasta, output, threads, pid=95, cov=85, returnDict=False):
         shutil.rmtree("blastdb")
     os.mkdir("blastdb")
     makedb = NcbimakeblastdbCommandline(
-        dbtype="nucl", input_file=fasta, out="blastdb/" + output + "_db"
+        dbtype="nucl",
+        input_file=fasta,
+        out=os.path.join("blastdb", Path(output).name + "_db"),
     )
     blastn = NcbiblastnCommandline(
         query=fasta,
-        db="blastdb/" + output + "_db",
+        db=os.path.join("blastdb", Path(output).name + "_db"),
         outfmt="6 std qlen slen",
         max_target_seqs=10000,
         perc_identity=90,
@@ -308,6 +311,7 @@ def clustering(fasta, output, threads, pid=95, cov=85, returnDict=False):
         for seq in SeqIO.parse(fasta, "fasta"):
             if seq.id in aniclust_dict.keys():
                 SeqIO.write(seq, f, "fasta")
+
     shutil.rmtree("blastdb")
     os.remove(output + ".out")
 
