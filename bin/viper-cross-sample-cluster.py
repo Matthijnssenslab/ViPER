@@ -98,13 +98,13 @@ def main():
     makedb = NcbimakeblastdbCommandline(
         dbtype="nucl",
         input_file=output + ".fasta",
-        out=os.path.join("blastdb", output_name + "_db"),
+        out=os.path.join(output_dir, "blastdb", output_name + "_db"),
     )
     makedb()
 
     blastn = NcbiblastnCommandline(
         query=reinclude_fasta,
-        db=os.path.join("blastdb", output_name + "_db"),
+        db=os.path.join(output_dir, "blastdb", output_name + "_db"),
         outfmt="6 std qlen slen",
         max_target_seqs=10000,
         perc_identity=90,
@@ -224,8 +224,9 @@ def main():
         for seq_id, mem_ids in clust_seqs.items():
             out.write(seq_id + "\t" + ",".join(mem_ids) + "\n")
 
-    shutil.rmtree("blastdb")
+    shutil.rmtree(os.path.join(output_dir, "blastdb"))
     os.remove(output + "_reinclude.out")
+    os.remove(output + ".fasta")
 
 
 if __name__ == "__main__":
