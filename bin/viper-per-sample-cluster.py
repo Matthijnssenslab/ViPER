@@ -340,7 +340,7 @@ def main():
     }
 
     cluster_dict = {**clean_v_dict, **hdict, **clean_fasta_dict}
-    write_fasta(cluster_dict, os.path.join(tmpdir, output_name + "_cluster.fasta"))
+    write_fasta(cluster_dict, os.path.join(tmpdir, output_name + "_to_cluster.fasta"))
 
     logger.newline()
     if not include:
@@ -359,8 +359,8 @@ def main():
 
     logger.newline()
     vu.clustering(
-        os.path.join(tmpdir, output_name + "_cluster.fasta"),
-        output,
+        os.path.join(tmpdir, output_name + "_to_cluster.fasta"),
+        output + "_clustered",
         args["threads"],
         args["pid"],
         args["cov"],
