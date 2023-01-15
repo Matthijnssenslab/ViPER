@@ -53,7 +53,7 @@ def parse_arguments():
         dest="threads",
         type=int,
         metavar="INT",
-        help="Number of threads to use.",
+        help="Number of threads to use. (default: %(default)s)",
         default=1,
     )
     parser.add_argument(
@@ -61,7 +61,7 @@ def parse_arguments():
         dest="pid",
         type=int,
         metavar="INT",
-        help="Minimum average nucleotide identity (ANI) for sequences to be clustered.",
+        help="Minimum average nucleotide identity (ANI) for sequences to be clustered. (default: %(default)s)",
         default=95,
     )
     parser.add_argument(
@@ -69,7 +69,7 @@ def parse_arguments():
         dest="cov",
         type=int,
         metavar="INT",
-        help="Minimum coverage %% of the shortest sequence that should be covered before clustering.",
+        help="Minimum coverage %% of the shortest sequence that should be covered before clustering. (default: %(default)s)",
         default=85,
     )
     return vars(parser.parse_args())

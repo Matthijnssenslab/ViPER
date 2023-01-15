@@ -64,7 +64,7 @@ def parse_arguments():
         dest="threads",
         type=int,
         metavar="INT",
-        help="Number of threads to use.",
+        help="Number of threads to use. (default: %(default)s)",
         default=1,
     )
     parser.add_argument(
@@ -73,7 +73,7 @@ def parse_arguments():
         dest="length",
         type=int,
         metavar="INT",
-        help="Minimum length of the host or viral region.",
+        help="Minimum length of the host or viral region. (default: %(default)s)",
         default=1000,
     )
     parser.add_argument(
@@ -81,7 +81,7 @@ def parse_arguments():
         dest="pid",
         type=int,
         metavar="INT",
-        help="Minimum average nucleotide identity (ANI) for sequences to be clustered.",
+        help="Minimum average nucleotide identity (ANI) for sequences to be clustered. (default: %(default)s)",
         default=95,
     )
     parser.add_argument(
@@ -89,14 +89,14 @@ def parse_arguments():
         dest="cov",
         type=int,
         metavar="INT",
-        help="Minimum coverage %% of the shortest sequence that should be covered before clustering.",
+        help="Minimum coverage %% of the shortest sequence that should be covered before clustering. (default: %(default)s)",
         default=85,
     )
     parser.add_argument(
         "--keep-bed",
         dest="bed",
         action="store_true",
-        help="Keep BED files with viral and host regions.",
+        help="Keep BED files with viral and host regions. (default: %(default)s)",
         default=False,
     )
     return vars(parser.parse_args())
