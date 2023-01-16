@@ -205,7 +205,13 @@ def parse_seqs(path):
 
 
 def aniclust(
-    fasta, anicalc_df, minlength=0, min_qcov=0, min_tcov=85, min_ani=95  # outname,
+    fasta,
+    anicalc_df,
+    outname,
+    minlength=0,
+    min_qcov=0,
+    min_tcov=85,
+    min_ani=95,  # outname,
 ):
     """Function to cluster sequences based on given percentage identity and minimum coverage."""
     # list seqs, sorted by length
@@ -268,13 +274,13 @@ def aniclust(
 
     # write
     logger.info("writing clusters...")
-    # keep = set()
+    keep = set()
     # for seq_id, mem_ids in clust_to_seqs.items():
     #    keep.add(seq_id)
-    # with open(outname, 'w') as out:
-    #    for seq_id, mem_ids in clust_to_seqs.items():
-    #        keep.add(seq_id)
-    #        out.write(seq_id + '\t' + ','.join(mem_ids)+'\n')
+    with open(outname, "w") as out:
+        for seq_id, mem_ids in clust_to_seqs.items():
+            keep.add(seq_id)
+            out.write(seq_id + "\t" + ",".join(mem_ids) + "\n")
 
     return clust_to_seqs
 
@@ -305,7 +311,13 @@ def clustering(fasta, output, threads, pid=95, cov=85, returnDict=False):
 
     anicalc_df = anicalc(output + ".out")
 
-    aniclust_dict = aniclust(fasta, anicalc_df, min_ani=pid, min_tcov=cov)
+    aniclust_dict = aniclust(
+        fasta,
+        anicalc_df,
+        output + "_clusters.tsv",
+        min_ani=pid,
+        min_tcov=cov,
+    )
 
     with open(output + ".fasta", "w") as f:
         for seq in SeqIO.parse(fasta, "fasta"):
