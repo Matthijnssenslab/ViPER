@@ -99,28 +99,44 @@ def parse_arguments():
         help="Keep BED files with viral and host regions. (default: %(default)s)",
         default=False,
     )
+    parser.add_argument(
+        "--debug",
+        dest="debug",
+        action="store_true",
+        help="Keep temporary files for debugging. (default: %(default)s)",
+        default=False,
+    )
     return vars(parser.parse_args())
 
 
 def make_bed(contamination, output, minlength, keepBed=False):
     """Function to generate BED files/dataframes from CheckV contamination output."""
+    # Read in contamination file from CheckV
     df = pd.read_csv(contamination, sep="\t", dtype=object)
 
+    # Define columns to keep from the file
     col_list = ["contig_id", "region_types", "region_lengths", "region_coords_bp"]
 
+    # Subset dataframe with only proviruses and the desired columns
     df1 = df.loc[(df["provirus"] == "Yes"), col_list]
 
+    # Define possible contamination combo's
     contamination_list = ["viral,host", "host,viral", "host,viral,host"]
 
+    # Check if there is another contamination possibility than defined
     if not df1.loc[~df1["region_types"].isin(contamination_list)].empty:
         logger.warninf("Other types of contamination:")
         print(*df1["contig_id"].values, sep="\n")
+
+    # Subset the dataframe with only contaminations in 'contamination_list' and continue
     df1 = df1.loc[df1["region_types"].isin(contamination_list)]
 
+    # Check if there are proviruses found, otherwise return none
     if df1.empty:
         logger.info(f"No proviruses found.")
         return None, None
 
+    # Create new df with viral/host regions split up
     df2 = pd.concat(
         [
             df1["contig_id"],
@@ -131,6 +147,7 @@ def make_bed(contamination, output, minlength, keepBed=False):
         axis=1,
     ).reset_index(drop=True)
 
+    # create list of dataframes with all contamination regions
     data = []
     for i in range(3):
         try:
@@ -144,6 +161,7 @@ def make_bed(contamination, output, minlength, keepBed=False):
             data.append(tmpdf)
     df3 = pd.concat(data).sort_index().reset_index(drop=True)
 
+    # Split the region coordinates in two columns and name them 'start'/'end'
     df4 = pd.concat(
         [
             df3.drop("region_coords_bp", axis=1),
@@ -152,31 +170,39 @@ def make_bed(contamination, output, minlength, keepBed=False):
         axis=1,
     )
     df4.rename(columns={0: "start", 1: "end"}, inplace=True)
+
+    # Convert to numeric
     df4[["region_lengths", "start", "end"]] = df4[
         ["region_lengths", "start", "end"]
     ].apply(pd.to_numeric)
+    # convert from CheckV to BED coords
     df4[["start", "end"]] -= 1
 
+    # Extract all viral regions from dataframe that are larger than the given minimum length
     viraldf = df4.loc[
         (df4["region_types"] == "viral") & (df4["region_lengths"] >= minlength),
         ["contig_id", "region_lengths", "start", "end"],
     ]
+    # Rename the contig id with info on the viral region length
     viraldf.loc[:, "bed_name"] = [
         x.replace("_cov", "v" + str(y) + "_cov").replace("_length", "v_length")
         for x, y in viraldf[["contig_id", "region_lengths"]].to_numpy()
     ]
     viraldf.drop("region_lengths", inplace=True, axis=1)
 
+    # Extract all host regions from dataframe that are larger than the given minimum length
     hostdf = df4.loc[
         (df4["region_types"] == "host") & (df4["region_lengths"] >= minlength),
         ["contig_id", "region_lengths", "start", "end"],
     ]
+    # Rename the contig id with info on the host region length
     hostdf.loc[:, "bed_name"] = [
         x.replace("_cov", "h" + str(y) + "_cov").replace("_length", "h_length")
         for x, y in hostdf[["contig_id", "region_lengths"]].to_numpy()
     ]
     hostdf.drop("region_lengths", inplace=True, axis=1)
 
+    # Keep BED files for debugging purposes
     if keepBed:
         viraldf.to_csv(output + "_viral.bed", sep="\t", header=False, index=False)
         hostdf.to_csv(output + "_host.bed", sep="\t", header=False, index=False)
@@ -207,20 +233,28 @@ def bedtools_fasta_dict(fasta_text):
 
 def quality_summary_selection(checkv_summary):
     """Function to select sequences with duplication/high k-mer warnings as assessed by CheckV."""
+    # Read in CheckV's quality_summary file
     df = pd.read_csv(checkv_summary, sep="\t", dtype={"warnings": "str"})
-    df["warnings"] = df["warnings"].fillna("")  # find faster way to get rid of Nan
+    # Fill NA in warning column with empty string
+    df["warnings"] = df["warnings"].fillna(
+        ""
+    )  # TO DO: find faster way to get rid of Nan
 
     include = set()
     exclude = set()
+    # Define warnings
     warnings = [
         "high kmer_freq may indicate large duplication",
         "contig >1.5x longer than expected genome length",
     ]
+    # Change quality_summary df in dictionary
     df_dict = df.to_dict("records")
     for row in df_dict:
+        # Select any provirus contig with duplication/longer than expected warning and add it to the 'exclude' set
         if row["provirus"] == "Yes" or any(x in row["warnings"] for x in warnings):
             exclude.add(row["contig_id"])
 
+        # Select all contigs with warnings and add it to the 'include' set
         if any(x in row["warnings"] for x in warnings):
             include.add(row["contig_id"])
 
@@ -254,21 +288,28 @@ def biopython_fasta(dictionary):
 
 
 def main():
+    # Parse script arguments
     args = parse_arguments()
     fasta = args["fasta"]
+    minlength = args["length"]
+    bed = args["bed"]
+    debug = args["debug"]
     output = args["output"]
     output_name = Path(args["output"]).name
     output_dir = Path(args["output"]).parent
 
+    # Create output directory if it doesn't exist
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
+    # Make tmp file for CheckV and other calculations
     tmpdir = tempfile.mkdtemp(dir=output_dir)
     # if os.path.exists("tmp_clustering"):
     #    shutil.rmtree("tmp_clustering")
     #
     # os.mkdir("tmp_clustering")
 
+    # Define CheckV arguments
     checkv_arguments = {
         "input": fasta,
         "db": args["db"],
@@ -281,38 +322,46 @@ def main():
 
     logger.info(f"Running CheckV...")
 
+    # Run CheckV
     checkv.end_to_end.main(checkv_arguments)
 
+    # Define CheckV output paths
     contamination = os.path.join(tmpdir, "contamination.tsv")
     qsummary = os.path.join(tmpdir, "quality_summary.tsv")
-    minlength = args["length"]
-    bed = args["bed"]
 
     logger.info(
         f"Excluding contigs with contamination, longer than expected and duplication issues..."
     )
 
+    # Return sets of contigs to include/exclude
     include, exclude = quality_summary_selection(qsummary)
 
     logger.newline()
     logger.info(f"Making BED for host and viral regions...")
 
+    # Make viral and host BED dfs for provirus contigs
     viralbed, hostbed = make_bed(contamination, output, minlength, keepBed=bed)
 
+    # Define dictionaries
     hdict = {}
     vdict = {}
     clean_v_dict = {}
 
+    # When there are proviruses in the data
     if viralbed is not None and hostbed is not None:
         logger.newline()
         logger.info(f"Splitting host sequence from viral contigs...")
         pysam.faidx(fasta)
+        # Make fasta for host/viral regions
         host = bedtools(hostbed.to_csv(header=None, index=False, sep="\t"), fasta)
         viral = bedtools(viralbed.to_csv(header=None, index=False, sep="\t"), fasta)
 
+        # Add them to a dictionary (key: contig_id, value: sequence)
         hdict = bedtools_fasta_dict(host)
         vdict = bedtools_fasta_dict(viral)
 
+        # Remove provirus full contig names from include set and add their new names (with viral region info)
+        # Also add the new names to a 'viral exclude' set
         viral_exclude = set()
         for row in viralbed.to_dict("records"):
             if row["contig_id"] in include:
@@ -320,12 +369,15 @@ def main():
                 include.add(row["bed_name"])
                 viral_exclude.add(row["bed_name"])
 
+        # Remove provirus contigs with duplication/longer than expected issues from provirus fasta dictionary
         clean_v_dict = {
             k: v for k, v in vdict.items() if k.lstrip(">") not in viral_exclude
         }
 
+        # Remove fasta index file
         os.remove(fasta + ".fai")
 
+    # Open unclustered fasta file
     fasta_seqs = {}
     with open(fasta, "r") as fh:
         lines = fh.readlines()
@@ -335,29 +387,38 @@ def main():
                 fasta_seqs[key] = ""
             else:
                 fasta_seqs[key] += line.strip()
+
+    # Remove sequences that are in the exclude set
     clean_fasta_dict = {
         k: v for k, v in fasta_seqs.items() if k.lstrip(">") not in exclude
     }
 
+    # Combine the host, clean provirus and clean fasta dictionaries
     cluster_dict = {**clean_v_dict, **hdict, **clean_fasta_dict}
     write_fasta(cluster_dict, os.path.join(tmpdir, output_name + "_to_cluster.fasta"))
 
-    logger.newline()
+    # Generate reinclude fasta
     if not include:
+        logger.newline()
         logger.info(
             f"No duplication issues in sequences, reinclude fasta is not generated."
         )
     else:
+        logger.newline()
         logger.info(
             f"Writing fasta file with contigs to re-include after cross-sample clustering..."
         )
+        # Combine general fasta with the viral regions fasta dictionary
         inclv_dict = {**vdict, **fasta_seqs}
+        # Extract all sequences (with issues) to reinclude
         reinclude_dict = {
             k: v for k, v in inclv_dict.items() if k.lstrip(">") in include
         }
         write_fasta(reinclude_dict, output + "_re-include.fasta")
 
     logger.newline()
+
+    # Cluster remaining sequences
     vu.clustering(
         os.path.join(tmpdir, output_name + "_to_cluster.fasta"),
         output + "_clustered",
@@ -366,7 +427,8 @@ def main():
         args["cov"],
     )
 
-    shutil.rmtree(tmpdir)
+    if not debug:
+        shutil.rmtree(tmpdir)
 
 
 if __name__ == "__main__":
