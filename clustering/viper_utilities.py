@@ -207,7 +207,7 @@ def parse_seqs(path):
 def aniclust(
     fasta,
     anicalc_df,
-    outname,
+    # outname,
     minlength=0,
     min_qcov=0,
     min_tcov=85,
@@ -277,7 +277,7 @@ def aniclust(
     keep = set()
     # for seq_id, mem_ids in clust_to_seqs.items():
     #    keep.add(seq_id)
-    with open(outname, "w") as out:
+    with open("./debug_clusters.tsv", "w") as out:
         for seq_id, mem_ids in clust_to_seqs.items():
             keep.add(seq_id)
             out.write(seq_id + "\t" + ",".join(mem_ids) + "\n")
@@ -314,7 +314,7 @@ def clustering(fasta, output, threads, pid=95, cov=85, returnDict=False):
     aniclust_dict = aniclust(
         fasta,
         anicalc_df,
-        output + "_clusters.tsv",
+        # outname=output + "_clusters.tsv",
         min_ani=pid,
         min_tcov=cov,
     )
