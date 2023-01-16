@@ -274,13 +274,13 @@ def aniclust(
 
     # write
     logger.info("writing clusters...")
-    keep = set()
+    # keep = set()
     # for seq_id, mem_ids in clust_to_seqs.items():
     #    keep.add(seq_id)
-    with open("./debug_clusters.tsv", "w") as out:
-        for seq_id, mem_ids in clust_to_seqs.items():
-            keep.add(seq_id)
-            out.write(seq_id + "\t" + ",".join(mem_ids) + "\n")
+    # with open("./debug_clusters.tsv", "w") as out:
+    #    for seq_id, mem_ids in clust_to_seqs.items():
+    #        keep.add(seq_id)
+    #        out.write(seq_id + "\t" + ",".join(mem_ids) + "\n")
 
     return clust_to_seqs
 
