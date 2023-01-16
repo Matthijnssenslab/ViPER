@@ -220,7 +220,7 @@ def main():
     logger.info(
         f"Write file with clusters and their respective cluster representatives..."
     )
-    with open(output + "_cluster_representatives.txt", "w") as out:
+    with open(output + "_clusters.tsv", "w") as out:
         for seq_id, mem_ids in clust_seqs.items():
             out.write(seq_id + "\t" + ",".join(mem_ids) + "\n")
 
