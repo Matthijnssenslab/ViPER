@@ -103,7 +103,7 @@ def parse_arguments():
         "--debug",
         dest="debug",
         action="store_true",
-        help="Keep temporary files for debugging. (default: %(default)s)",
+        help="Keep temporary files for debugging purposes. (default: %(default)s)",
         default=False,
     )
     return vars(parser.parse_args())
@@ -297,6 +297,10 @@ def main():
     output = args["output"]
     output_name = Path(args["output"]).name
     output_dir = Path(args["output"]).parent
+
+    # If debugging option is set also keep the bed files, regardless of the original value
+    if debug:
+        bed = True
 
     # Create output directory if it doesn't exist
     if not os.path.exists(output_dir):
