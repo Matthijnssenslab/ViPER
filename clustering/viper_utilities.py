@@ -319,6 +319,10 @@ def clustering(fasta, output, threads, pid=95, cov=85, returnDict=False):
         min_tcov=cov,
     )
 
+    with open(output + "_clusters.tsv", "w") as out:
+        for seq_id, mem_ids in aniclust_dict.items():
+            out.write(seq_id + "\t" + ",".join(mem_ids) + "\n")
+
     with open(output + ".fasta", "w") as f:
         for seq in SeqIO.parse(fasta, "fasta"):
             if seq.id in aniclust_dict.keys():
