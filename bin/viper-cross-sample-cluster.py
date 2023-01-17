@@ -76,6 +76,7 @@ def parse_arguments():
 
 
 def main():
+    # Parse arguments
     args = parse_arguments()
     cluster_fasta = args["cluster_fasta"]
     reinclude_fasta = args["reinclude_fasta"]
@@ -84,17 +85,20 @@ def main():
     output_name = Path(args["output"]).name
     output_dir = Path(args["output"]).parent
 
+    # Make output directory
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
     logger = vu.get_logger()
 
+    # CLuster sequences of all samples (without reinclude fasta)
     clust_seqs = vu.clustering(cluster_fasta, output, threads, returnDict=True)
 
     logger.newline()
     logger.info(
         f"Calculating ANI and coverage of sequences to be reincluded against clustered sequences..."
     )
+    # Make blast db of newly clustered sequences
     makedb = NcbimakeblastdbCommandline(
         dbtype="nucl",
         input_file=output + ".fasta",
@@ -102,24 +106,28 @@ def main():
     )
     makedb()
 
+    # Blast reinclude sequences against blast db of clustered sequences
     blastn = NcbiblastnCommandline(
         query=reinclude_fasta,
         db=os.path.join(output_dir, "blastdb", output_name + "_db"),
         outfmt="6 std qlen slen",
         max_target_seqs=10000,
-        perc_identity=90,
+        perc_identity=args["pid"] - 5,  # make sure blast pid is 5 less than cluster pid
         num_threads=threads,
         out=output + "_reinclude.out",
     )
     blastn()
 
+    # Calculate ANI and coverage of reinclude sequences to clustered sequences
     anicalc_df = vu.anicalc(output + "_reinclude.out")
     anicalc_dict = anicalc_df.to_dict("records")
 
+    # Define sets
     qcov85 = set()
     tcov85 = set()
     singletons = set()
 
+    # Add name of reinclude sequences to qcov85 set, if hit query coverage is higher than 85%
     for row in anicalc_dict:
         if (
             row["pid"] >= args["pid"]
@@ -128,27 +136,34 @@ def main():
         ):
             qcov85.add(row["qname"])
 
+    # Add name of reinclude sequences to tcov85 set, if hit target coverage is higher than 85%
+    # all instances in both qcov and tcov sets are unique
     for row in anicalc_dict:
         if (
             row["pid"] >= args["pid"]
             and row["tcov"] >= args["cov"]
-            and row["qname"] not in qcov85.union(tcov85)
+            and row["qname"] not in qcov85.union(tcov85)  # not in both sets
         ):
             tcov85.add(row["qname"])
 
+    # Read in reinclude sequences
     reinclude_sequences = SeqIO.parse(reinclude_fasta, "fasta")
 
+    # Add sequences not in qcov85 and tcov85 set to singletons set
     for fasta in reinclude_sequences:
         name, sequence = fasta.id, str(fasta.seq)
         if name not in qcov85.union(tcov85, singletons):
             singletons.add(name)
 
+    # Make dictionary of all sequence ids (key) and the length of the sequence (value)
     fasta_length_dictionary = {}
     fasta_sequences = SeqIO.parse(output + ".fasta", "fasta")
     for fasta in fasta_sequences:
         name, sequence = fasta.id, str(fasta.seq)
         fasta_length_dictionary[name] = len(sequence)
 
+    # Make a dictionary with each contig in qcov set with its id (key) and the length of its target sequence (value)
+    # qCOV85 = (partial)duplications? -> top hit = longest hit (cfr. normal clustering)
     logger.newline()
     logger.info(f"Add sequences with possible duplications...")
     qcov_dict = {}
@@ -164,6 +179,7 @@ def main():
         subset = {key: fasta_length_dictionary[key] for key in data}
         qcov_dict[contig] = max(subset, key=subset.get)
 
+    # tCOV85 = chimeras? -> multiple hits until 110% qcov reached (sort by ANI)
     logger.info(f"Add possible chimeric sequences...")
     tcov_dict = {}
     for contig in tcov85:
@@ -186,13 +202,16 @@ def main():
             qcov_sum = df["qcov"].sum()
         tcov_dict[contig] = df["tname"].tolist()
 
+    # singletons: not present in any other sample -> add as singleton to clustered file
     logger.info(f"Add singleton sequences...")
     single_dict = {}
     for contig in singletons:
         single_dict[contig] = contig
 
+    # Combine dictionaries with reinclude sequences and their cluster representative
     reinclude = {**qcov_dict, **tcov_dict, **single_dict}
 
+    # Add reinclude sequences to general dictionary with all sequences
     for k, v in reinclude.items():
         if isinstance(v, list):
             for i in v:
