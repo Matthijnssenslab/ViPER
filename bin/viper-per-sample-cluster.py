@@ -429,6 +429,7 @@ def main():
         args["threads"],
         args["pid"],
         args["cov"],
+        write_clusters=True,
     )
 
     if not debug:

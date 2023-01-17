@@ -207,11 +207,10 @@ def parse_seqs(path):
 def aniclust(
     fasta,
     anicalc_df,
-    # outname,
     minlength=0,
     min_qcov=0,
     min_tcov=85,
-    min_ani=95,  # outname,
+    min_ani=95,
 ):
     """Function to cluster sequences based on given percentage identity and minimum coverage."""
     # list seqs, sorted by length
@@ -285,7 +284,9 @@ def aniclust(
     return clust_to_seqs
 
 
-def clustering(fasta, output, threads, pid=95, cov=85, returnDict=False):
+def clustering(
+    fasta, output, threads, pid=95, cov=85, returnDict=False, write_clusters=False
+):
     """Function to cluster fasta sequences based on a percentage identity and minimum coverage and write cluster representatives to a fasta file."""
     logger.info(f"Clustering sequences:")
     if os.path.exists("blastdb_" + Path(output).name):
@@ -314,14 +315,14 @@ def clustering(fasta, output, threads, pid=95, cov=85, returnDict=False):
     aniclust_dict = aniclust(
         fasta,
         anicalc_df,
-        # outname=output + "_clusters.tsv",
         min_ani=pid,
         min_tcov=cov,
     )
 
-    with open(output + "_clusters.tsv", "w") as out:
-        for seq_id, mem_ids in aniclust_dict.items():
-            out.write(seq_id + "\t" + ",".join(mem_ids) + "\n")
+    if write_clusters:
+        with open(output + ".tsv", "w") as out:
+            for seq_id, mem_ids in aniclust_dict.items():
+                out.write(seq_id + "\t" + ",".join(mem_ids) + "\n")
 
     with open(output + ".fasta", "w") as f:
         for seq in SeqIO.parse(fasta, "fasta"):
