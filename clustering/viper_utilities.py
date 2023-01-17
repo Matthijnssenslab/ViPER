@@ -288,17 +288,17 @@ def aniclust(
 def clustering(fasta, output, threads, pid=95, cov=85, returnDict=False):
     """Function to cluster fasta sequences based on a percentage identity and minimum coverage and write cluster representatives to a fasta file."""
     logger.info(f"Clustering sequences:")
-    if os.path.exists("blastdb"):
-        shutil.rmtree("blastdb")
-    os.mkdir("blastdb")
+    if os.path.exists("blastdb_" + Path(output).name):
+        shutil.rmtree("blastdb_" + Path(output).name)
+    os.mkdir("blastdb_" + Path(output).name)
     makedb = NcbimakeblastdbCommandline(
         dbtype="nucl",
         input_file=fasta,
-        out=os.path.join("blastdb", Path(output).name + "_db"),
+        out=os.path.join("blastdb_" + Path(output).name, Path(output).name + "_db"),
     )
     blastn = NcbiblastnCommandline(
         query=fasta,
-        db=os.path.join("blastdb", Path(output).name + "_db"),
+        db=os.path.join("blastdb_" + Path(output).name, Path(output).name + "_db"),
         outfmt="6 std qlen slen",
         max_target_seqs=10000,
         perc_identity=90,
@@ -328,7 +328,7 @@ def clustering(fasta, output, threads, pid=95, cov=85, returnDict=False):
             if seq.id in aniclust_dict.keys():
                 SeqIO.write(seq, f, "fasta")
 
-    shutil.rmtree("blastdb")
+    shutil.rmtree("blastdb_" + Path(output).name)
     os.remove(output + ".out")
 
     if returnDict:
