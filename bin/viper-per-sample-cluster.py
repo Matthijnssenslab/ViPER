@@ -174,7 +174,7 @@ def make_bed(contamination, output, minlength, keepBed=False):
     # Convert to numeric
     df4[["region_lengths", "start", "end"]] = df4[
         ["region_lengths", "start", "end"]
-    ].apply(pd.to_numeric(downcast="integer"))
+    ].apply(pd.to_numeric, downcast="integer")
     # convert from CheckV to BED coords
     df4[["start", "end"]] -= 1
 
