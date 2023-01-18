@@ -159,7 +159,7 @@ def make_bed(contamination, output, minlength, keepBed=False):
             tmpdf = pd.concat([df2["contig_id"], df2[i]], axis=1)
             tmpdf.columns = col_list
             data.append(tmpdf)
-    df3 = pd.concat(data).sort_index().reset_index(drop=True)
+    df3 = pd.concat(data).sort_index().reset_index(drop=True).dropna()
 
     # Split the region coordinates in two columns and name them 'start'/'end'
     df4 = pd.concat(
