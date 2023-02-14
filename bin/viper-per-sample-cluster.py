@@ -185,7 +185,9 @@ def make_bed(contamination, output, minlength, keepBed=False):
     ]
     # Rename the contig id with info on the viral region length
     viraldf.loc[:, "bed_name"] = [
-        x.replace("_cov", "v" + str(y) + "_cov").replace("_length", "v_length")
+        x.replace("_cov", "V" + str(y) + "_cov").replace(
+            "_length", "V_length"
+        )  # Capital letter V?
         for x, y in viraldf[["contig_id", "region_lengths"]].to_numpy()
     ]
     viraldf.drop("region_lengths", inplace=True, axis=1)
@@ -197,7 +199,9 @@ def make_bed(contamination, output, minlength, keepBed=False):
     ]
     # Rename the contig id with info on the host region length
     hostdf.loc[:, "bed_name"] = [
-        x.replace("_cov", "h" + str(y) + "_cov").replace("_length", "h_length")
+        x.replace("_cov", "H" + str(y) + "_cov").replace(
+            "_length", "H_length"
+        )  # Capital letter H?
         for x, y in hostdf[["contig_id", "region_lengths"]].to_numpy()
     ]
     hostdf.drop("region_lengths", inplace=True, axis=1)
