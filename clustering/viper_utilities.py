@@ -169,7 +169,10 @@ def anicalc(blast_input, pid=90, length=0):
     with open(blast_input, "r") as input:
         anicalc_dict = {}
         index = 0
-        for alns in yield_alignment_blocks(input):
+        alignment_block = yield_alignment_blocks(input)
+        if alignment_block == None:
+            return None
+        for alns in alignment_block:
             alns = prune_alns(alns, min_pid=pid, min_len=length)
             if len(alns) == 0:
                 continue
@@ -310,14 +313,21 @@ def clustering(
     logger.info(f"Running blastn...")
     blastn()
 
-    if not os.path.isfile(output + ".out"):
+    # if not os.path.isfile(output + ".out"):
+    #    logger.info(
+    #        f"No sequences to cluster, use your input {fasta} for downstream analysis."
+    #    )
+    #    os.remove(output + ".out")
+    #    return None
+
+    anicalc_df = anicalc(output + ".out")
+
+    if anicalc_df == None:
         logger.info(
             f"No sequences to cluster, use your input {fasta} for downstream analysis."
         )
         os.remove(output + ".out")
         return None
-
-    anicalc_df = anicalc(output + ".out")
 
     aniclust_dict = aniclust(
         fasta,
