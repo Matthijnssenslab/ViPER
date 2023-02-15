@@ -310,7 +310,7 @@ def clustering(
     logger.info(f"Running blastn...")
     blastn()
 
-    if os.stat(output + ".out").st_size == 0:
+    if not os.path.isfile(output + ".out"):
         logger.info(
             f"No sequences to cluster, use your input {fasta} for downstream analysis."
         )
