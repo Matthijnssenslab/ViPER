@@ -325,9 +325,9 @@ def clustering(
 
     if anicalc_df == None:
         logger.info(
-            f"No sequences to cluster, use you original fasta file for downstream analysis."
+            f'No sequences to cluster, creating "clustered" output file without sequences to reinclude.'
         )
-        # shutil.copyfile(fasta, output + ".fasta")
+        shutil.copyfile(fasta, output + ".fasta")
         os.remove(output + ".out")
         return None
 
