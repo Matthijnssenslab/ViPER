@@ -324,8 +324,10 @@ def clustering(
     anicalc_df = anicalc(output + ".out")
 
     if anicalc_df == None:
-        logger.info(f"No sequences to cluster.")
-        shutil.copyfile(fasta, output + ".fasta")
+        logger.info(
+            f"No sequences to cluster, use you original fasta file for downstream analysis."
+        )
+        # shutil.copyfile(fasta, output + ".fasta")
         os.remove(output + ".out")
         return None
 
