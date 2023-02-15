@@ -173,10 +173,10 @@ def anicalc(blast_input, pid=90, length=0):
         index = 0
         for alns in yield_alignment_blocks(input):
             alns = prune_alns(alns, min_pid=pid, min_len=length)
-            if len(alns) == 0:
-                continue
             if alns == None:
                 return None
+            if len(alns) == 0:
+                continue
             index += 1
             qname, tname = alns[0]["qname"], alns[0]["tname"]
             ani = compute_ani(alns)
