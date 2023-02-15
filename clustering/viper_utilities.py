@@ -310,6 +310,13 @@ def clustering(
     logger.info(f"Running blastn...")
     blastn()
 
+    if os.stat(output + ".out").st_size == 0:
+        logger.info(
+            f"No sequences to cluster, use your input {fasta} for downstream analysis."
+        )
+        os.remove(output + ".out")
+        return None
+
     anicalc_df = anicalc(output + ".out")
 
     aniclust_dict = aniclust(
@@ -319,11 +326,13 @@ def clustering(
         min_tcov=cov,
     )
 
+    logger.info(f"Writing clusters.")
     if write_clusters:
         with open(output + ".tsv", "w") as out:
             for seq_id, mem_ids in aniclust_dict.items():
                 out.write(seq_id + "\t" + ",".join(mem_ids) + "\n")
 
+    logger.info(f"Writing cluster represtentatives' sequences to a fasta file.")
     with open(output + ".fasta", "w") as f:
         for seq in SeqIO.parse(fasta, "fasta"):
             if seq.id in aniclust_dict.keys():
