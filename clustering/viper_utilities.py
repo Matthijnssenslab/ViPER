@@ -328,6 +328,7 @@ def clustering(
             f'No sequences to cluster, creating "clustered" fasta file without the sequences to reinclude.'
         )
         shutil.copyfile(fasta, output + ".fasta")
+        shutil.rmtree("blastdb_" + Path(output).name)
         os.remove(output + ".out")
         return None
 
