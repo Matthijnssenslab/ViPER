@@ -323,7 +323,7 @@ def clustering(
 
     anicalc_df = anicalc(output + ".out")
 
-    if anicalc_df == None:
+    if anicalc_df is None:
         logger.info(
             f'No sequences to cluster, creating "clustered" fasta file without the sequences to reinclude.'
         )
