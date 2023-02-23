@@ -59,12 +59,12 @@ OPTIONAL:
    -g | --host-genome		If specified, reads mapping to the given host genome will be removed. Requires the path to a bowtie2 indexed host genome.
 
  Assembly:
-   -m | --min-length		The minimum length for final assembled scaffolds. (default: 500)
+   -m | --min-length		The minimum length for final assembled contigs. (default: 500)
    -k | --spades-k-mer		List of k-mer sizes for SPAdes (must be odd and less than 128). (default: 21,33,55,77)
    --triple-assembly		Will perform three denovo assemblies with metaspades on the full reads, a 10% and 1% subset of the reads.
-   				All assembled scaffolds will be concatenated and clustered together to remove redundancy (see also --cluster-cover/identity).
+   				All assembled contigs will be concatenated and clustered together to remove redundancy (see also --cluster-cover/identity).
    --cluster-cover		% of the shortest sequence that should be covered during clustering. (default: 85)
-   --cluster-identity		% of ANI for clustering scaffolds. (default: 95)
+   --cluster-identity		% of ANI for clustering contigs. (default: 95)
    --memory-limit		Memory (in GB) to be reserved for SPAdes assembly. (default: autodetected by SPAdes)
 
  Classification:
@@ -174,7 +174,7 @@ while [ ! $# -eq 0 ]; do
         		minlength=$2
         		shift
         	elif [[ "$2" == -* ]]; then
-        		>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: Give a minimum length for assembled scaffolds."
+        		>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: Give a minimum length for assembled contigs."
         		exit 1
         	else
         		>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The given minimum length is not an integer."
@@ -198,7 +198,7 @@ while [ ! $# -eq 0 ]; do
         		crop="CROP:$2"
         		shift
         	elif [[ "$2" == -* ]]; then
-        		>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: Give a minimum length for assembled scaffolds."
+        		>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: Give a minimum length for assembled contigs."
         		exit 1
         	else
         		>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The given minimum length is not an integer."
@@ -722,10 +722,10 @@ if [[ $triple -eq 1 ]]; then
 	fi
 	
 	cd ASSEMBLY1
-	mv scaffolds.fasta "$sample".full.scaffolds.fasta
+	mv contigs.fasta "$sample".full.contigs.fasta
 	#to add the sample names to your assemblies
-	sed -i "s/NODE_/NODE_A/g" "$sample".full.scaffolds.fasta
-	sed -i "s/>.*/&_${sample}/" "$sample".full.scaffolds.fasta
+	sed -i "s/NODE_/NODE_A/g" "$sample".full.contigs.fasta
+	sed -i "s/>.*/&_${sample}/" "$sample".full.contigs.fasta
 
 	# 10% assembly
 	printf '\n\n%s\n' "[$(date "+%F %H:%M")] INFO: Starting second assembly with 10% of the reads."
@@ -733,10 +733,10 @@ if [[ $triple -eq 1 ]]; then
 	metaspades.py -1 "$subset10_R1" -2 "$subset10_R2" \
 	-t "$threads" -k "$spades_k_mer" -o ASSEMBLY2 $spades_memory
 	cd ASSEMBLY2
-	mv scaffolds.fasta $"$sample".10-percent.scaffolds.fasta
+	mv contigs.fasta $"$sample".10-percent.contigs.fasta
 	#to add the sample names to your assemblies
-	sed -i "s/NODE_/NODE_B/g" "$sample".10-percent.scaffolds.fasta
-	sed -i "s/>.*/&_${sample}/" "$sample".10-percent.scaffolds.fasta
+	sed -i "s/NODE_/NODE_B/g" "$sample".10-percent.contigs.fasta
+	sed -i "s/>.*/&_${sample}/" "$sample".10-percent.contigs.fasta
 
 	# 1% assembly
 	printf '\n\n%s\n' "[$(date "+%F %H:%M")] INFO: Starting third assembly with 1% of the reads."
@@ -744,10 +744,10 @@ if [[ $triple -eq 1 ]]; then
 	metaspades.py -1 "$subset1_R1" -2 "$subset1_R2" \
 	-t "$threads" -k "$spades_k_mer" -o ASSEMBLY3 $spades_memory
 	cd ASSEMBLY3
-	mv scaffolds.fasta "$sample".1-percent.scaffolds.fasta
+	mv contigs.fasta "$sample".1-percent.contigs.fasta
 	#to add the sample names to your assemblies
-	sed -i "s/NODE_/NODE_C/g" "$sample".1-percent.scaffolds.fasta
-	sed -i "s/>.*/&_${sample}/" "$sample".1-percent.scaffolds.fasta
+	sed -i "s/NODE_/NODE_C/g" "$sample".1-percent.contigs.fasta
+	sed -i "s/>.*/&_${sample}/" "$sample".1-percent.contigs.fasta
 else
 	printf '\n%s\n' "[$(date "+%F %H:%M")] INFO: Starting assembly with metaSPAdes."
 	cd "$outdir"
@@ -759,55 +759,55 @@ else
 		-t "$threads" -k "$spades_k_mer" -o ASSEMBLY $spades_memory
 	fi
 	cd ASSEMBLY
-	mv scaffolds.fasta "$sample".scaffolds.fasta
+	mv contigs.fasta "$sample".contigs.fasta
 	#to add the sample names to your assemblies
-	sed -i "s/>.*/&_${sample}/" "$sample".scaffolds.fasta
+	sed -i "s/>.*/&_${sample}/" "$sample".contigs.fasta
 fi
 printf '\n%s\n' "[$(date "+%F %H:%M")] INFO: Assembly finished!"
 ##############################################################################################################################################################
 
 ### Clustering assemblies
 cd "$outdir"
-mkdir -p SCAFFOLDS
+mkdir -p CONTIGS
 
 if [[ $triple -eq 1 ]]; then
-	cd SCAFFOLDS
+	cd CONTIGS
 	mkdir -p triple-assembly
-	cp "$outdir"/ASSEMBLY/ASSEMBLY*/*.scaffolds.fasta triple-assembly/
-	cat triple-assembly/*.scaffolds.fasta > "$sample"_all.scaffolds.fasta
-	printf '\n%s\n' "[$(date "+%F %H:%M")] INFO: Filtering scaffolds larger than "$minlength"bp."
-	seqkit seq -m "$minlength" -j "$threads" "$sample"_all.scaffolds.fasta > "$sample"_"$minlength".scaffolds.fasta
-	seqkit sort --by-length --reverse -o "$sample"_"$minlength".scaffolds.fasta "$sample"_"$minlength".scaffolds.fasta
-	printf '\n%s\n' "[$(date "+%F %H:%M")] INFO: Clustering scaffolds on "$cluster_identity"% identity over "$cluster_cover"% of the length."
-	#Cluster_genomes.pl -f "$sample"_"$minlength".scaffolds.fasta -c "$cluster_cover" -i "$cluster_identity" -t "$threads"
+	cp "$outdir"/ASSEMBLY/ASSEMBLY*/*.contigs.fasta triple-assembly/
+	cat triple-assembly/*.contigs.fasta > "$sample"_all.contigs.fasta
+	printf '\n%s\n' "[$(date "+%F %H:%M")] INFO: Filtering contigs larger than "$minlength"bp."
+	seqkit seq -m "$minlength" -j "$threads" "$sample"_all.contigs.fasta > "$sample"_"$minlength".contigs.fasta
+	seqkit sort --by-length --reverse -o "$sample"_"$minlength".contigs.fasta "$sample"_"$minlength".contigs.fasta
+	printf '\n%s\n' "[$(date "+%F %H:%M")] INFO: Clustering contigs on "$cluster_identity"% identity over "$cluster_cover"% of the length."
+	#Cluster_genomes.pl -f "$sample"_"$minlength".contigs.fasta -c "$cluster_cover" -i "$cluster_identity" -t "$threads"
 	mkdir clustering
-	makeblastdb -in "$sample"_"$minlength".scaffolds.fasta -dbtype nucl -out clustering/"$sample"_"$minlength"
+	makeblastdb -in "$sample"_"$minlength".contigs.fasta -dbtype nucl -out clustering/"$sample"_"$minlength"
 	if [[ ! $? -eq 0 ]]; then
 		>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: Failed to make blastdb for clustering."
 		exit 1
 	fi
-	blastn -query "$sample"_"$minlength".scaffolds.fasta -db clustering/"$sample"_"$minlength" -outfmt '6 std qlen slen' -max_target_seqs 10000 -perc_identity "$blastn_pid" -out clustering/"$sample"_"$minlength".tsv -num_threads "$threads"
+	blastn -query "$sample"_"$minlength".contigs.fasta -db clustering/"$sample"_"$minlength" -outfmt '6 std qlen slen' -max_target_seqs 10000 -perc_identity "$blastn_pid" -out clustering/"$sample"_"$minlength".tsv -num_threads "$threads"
 	anicalc.py -i clustering/"$sample"_"$minlength".tsv -o clustering/"$sample"_"$minlength"_ani.tsv
 	if [[ $? -eq 0 ]]; then
-		aniclust.py --fna "$sample"_"$minlength".scaffolds.fasta --ani clustering/"$sample"_"$minlength"_ani.tsv --out "$sample"_"$minlength"_clusters.tsv --min_ani "$cluster_identity" --min_qcov 0 --min_tcov "$cluster_cover"
-		mv "$sample"_"$minlength".scaffolds.fasta "$sample"_"$minlength"-unclustered.scaffolds.fasta
+		aniclust.py --fna "$sample"_"$minlength".contigs.fasta --ani clustering/"$sample"_"$minlength"_ani.tsv --out "$sample"_"$minlength"_clusters.tsv --min_ani "$cluster_identity" --min_qcov 0 --min_tcov "$cluster_cover"
+		mv "$sample"_"$minlength".contigs.fasta "$sample"_"$minlength"-unclustered.contigs.fasta
 		cut -f1 "$sample"_"$minlength"_clusters.tsv > "$sample"_cluster_representatives.txt
-		seqkit grep -j "$threads" -f "$sample"_cluster_representatives.txt -n -o "$sample"_"$minlength".scaffolds.fasta "$sample"_"$minlength"-unclustered.scaffolds.fasta
-		seqkit sort --by-length --reverse -o "$sample"_"$minlength".scaffolds.fasta "$sample"_"$minlength".scaffolds.fasta
+		seqkit grep -j "$threads" -f "$sample"_cluster_representatives.txt -n -o "$sample"_"$minlength".contigs.fasta "$sample"_"$minlength"-unclustered.contigs.fasta
+		seqkit sort --by-length --reverse -o "$sample"_"$minlength".contigs.fasta "$sample"_"$minlength".contigs.fasta
 	else
-		printf '\n%s\n' "[$(date "+%F %H:%M")] WARNING: Failed to calculate ANI for clustering: continuing with all scaffolds larger than "$minlength"bp."
+		printf '\n%s\n' "[$(date "+%F %H:%M")] WARNING: Failed to calculate ANI for clustering: continuing with all contigs larger than "$minlength"bp."
 	fi
 else
-	cp ASSEMBLY/"$sample".scaffolds.fasta SCAFFOLDS/
-	cd SCAFFOLDS/
-	printf '\n%s\n' "[$(date "+%F %H:%M")] INFO: Filtering scaffolds larger than "$minlength"bp."
-	seqkit seq -m "$minlength" -j "$threads" "$sample".scaffolds.fasta > "$sample"_"$minlength".scaffolds.fasta
+	cp ASSEMBLY/"$sample".contigs.fasta CONTIGS/
+	cd CONTIGS/
+	printf '\n%s\n' "[$(date "+%F %H:%M")] INFO: Filtering contigs larger than "$minlength"bp."
+	seqkit seq -m "$minlength" -j "$threads" "$sample".contigs.fasta > "$sample"_"$minlength".contigs.fasta
 fi
 
-scaffolds="$sample"_"$minlength".scaffolds.fasta
+contigs="$sample"_"$minlength".contigs.fasta
 
 printf '\n%s\n' "[$(date "+%F %H:%M")] INFO: Running Quast for assembly QC."
-quast.py -t "$threads" --fast -m "$minlength" -o "$outdir"/QC/QUAST "$outdir"/SCAFFOLDS/"$scaffolds"
+quast.py -t "$threads" --fast -m "$minlength" -o "$outdir"/QC/QUAST "$outdir"/CONTIGS/"$contigs"
 
 if [[ ! $? -eq 0 ]]; then
 	quast=1
@@ -822,7 +822,7 @@ if [[ $diamond -eq 1 ]]; then
 	mkdir -p DIAMOND
 	cd DIAMOND
 	printf '\n%s\n' "[$(date "+%F %H:%M")] INFO: Running Diamond!"
-	diamond blastx -d "$diamond_path" -q "$outdir"/SCAFFOLDS/"$scaffolds" -a "$sample" -p "$threads" $diamond_sensitivity -c 1 -b 5 --tmpdir /dev/shm
+	diamond blastx -d "$diamond_path" -q "$outdir"/CONTIGS/"$contigs" -a "$sample" -p "$threads" $diamond_sensitivity -c 1 -b 5 --tmpdir /dev/shm
 	diamond view -d "$diamond_path" -a "$sample" -o "$sample".m8 -p "$threads"
 	
 	if [[ ! $? -eq 0 ]]; then
@@ -835,13 +835,13 @@ fi
 if [[ $diamond -eq 1 ]]; then
 ### Relative abundances by mapping 
 	printf '\n%s\n' "[$(date "+%F %H:%M")] INFO: Counting abundances for Krona."
-	cd "$outdir"/SCAFFOLDS
+	cd "$outdir"/CONTIGS
 
-	bwa-mem2 index "$scaffolds"
-	bwa-mem2 mem "$scaffolds" "$final_read1" "$final_read2" -t "$threads" | samtools view -Su - | samtools sort - -o "$sample".R.sort.bam
+	bwa-mem2 index "$contigs"
+	bwa-mem2 mem "$contigs" "$final_read1" "$final_read2" -t "$threads" | samtools view -Su - | samtools sort - -o "$sample".R.sort.bam
 
 	if [[ $unpaired -eq 1 ]]; then
-		bwa-mem2 mem "$scaffolds" "$final_unpaired" -t "$threads" | samtools view -Su - | samtools sort - -o "$sample".un.sort.bam
+		bwa-mem2 mem "$contigs" "$final_unpaired" -t "$threads" | samtools view -Su - | samtools sort - -o "$sample".un.sort.bam
 		samtools merge -f "$sample".bam "$sample".R.sort.bam "$sample".un.sort.bam
 		rm "$sample".R.sort.bam
 		rm "$sample".un.sort.bam
@@ -856,10 +856,10 @@ if [[ $diamond -eq 1 ]]; then
 	cd "$outdir"
 	mkdir -p KRONA
 	printf '\n%s\n' "[$(date "+%F %H:%M")] INFO: Making Krona chart."
-	ktImportBLAST -o KRONA/"$sample".html "$outdir"/DIAMOND/"$sample".m8,"$sample" "$outdir"/DIAMOND/"$sample".m8:"$outdir"/SCAFFOLDS/"$sample".magnitudes,"$sample".magn
+	ktImportBLAST -o KRONA/"$sample".html "$outdir"/DIAMOND/"$sample".m8,"$sample" "$outdir"/DIAMOND/"$sample".m8:"$outdir"/CONTIGS/"$sample".magnitudes,"$sample".magn
 
 	#ktClassifyBLAST "$outdir"/DIAMOND/"$sample".m8 -o KRONA/"$sample".tab
-	#awk 'NR==FNR { a[$1]=$2; next} $1 in a {print $0,"\t"a[$1]}' "$outdir"/SCAFFOLDS/"$sample".magnitudes "$outdir"/KRONA/"$sample".tab > "$outdir"/KRONA/"$sample".magnitudes.tab
+	#awk 'NR==FNR { a[$1]=$2; next} $1 in a {print $0,"\t"a[$1]}' "$outdir"/CONTIGS/"$sample".magnitudes "$outdir"/KRONA/"$sample".tab > "$outdir"/KRONA/"$sample".magnitudes.tab
 elif [[ ! $quast -eq 0 ]]; then
 	retfunc 1
 else
