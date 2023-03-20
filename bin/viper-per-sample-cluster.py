@@ -125,7 +125,7 @@ def make_bed(contamination, output, minlength, keepBed=False):
 
     # Check if there is another contamination possibility than defined
     if not df1.loc[~df1["region_types"].isin(contamination_list)].empty:
-        logger.warninf("Other types of contamination:")
+        logger.warning("Other types of contamination:")
         print(*df1["contig_id"].values, sep="\n")
 
     # Subset the dataframe with only contaminations in 'contamination_list' and continue
