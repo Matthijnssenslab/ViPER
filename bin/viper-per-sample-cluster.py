@@ -121,7 +121,12 @@ def make_bed(contamination, output, minlength, keepBed=False):
     df1 = df.loc[(df["provirus"] == "Yes"), col_list]
 
     # Define possible contamination combo's
-    contamination_list = ["viral,host", "host,viral", "host,viral,host"]
+    contamination_list = [
+        "viral,host",
+        "host,viral",
+        "host,viral,host",
+        "viral,host,viral",
+    ]
 
     # Check if there is another contamination possibility than defined
     if not df1.loc[~df1["region_types"].isin(contamination_list)].empty:
