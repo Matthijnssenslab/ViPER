@@ -809,29 +809,29 @@ if [[ $triple -eq 1 ]]; then
 	#Cluster_genomes.pl -f "$sample"_"$minlength".contigs.fasta -c "$cluster_cover" -i "$cluster_identity" -t "$threads"
 	mkdir clustering
 
-	viper-per-sample-cluster.py -i "$sample"_"$minlength".contigs.fasta -d "$checkv_db" -o clustering/"$sample"_"$minlength" -t "$threads" --min-identity "$cluster_identity" --min-coverage "$cluster_cover"
-	#makeblastdb -in "$sample"_"$minlength".contigs.fasta -dbtype nucl -out clustering/"$sample"_"$minlength"
-	#if [[ ! $? -eq 0 ]]; then
-	#	>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: Failed to make blastdb for clustering."
-	#	exit 1
-	#fi
-	#blastn -query "$sample"_"$minlength".contigs.fasta -db clustering/"$sample"_"$minlength" -outfmt '6 std qlen slen' -max_target_seqs 10000 -perc_identity "$blastn_pid" -out clustering/"$sample"_"$minlength".tsv -num_threads "$threads"
-	#anicalc.py -i clustering/"$sample"_"$minlength".tsv -o clustering/"$sample"_"$minlength"_ani.tsv
-	#if [[ $? -eq 0 ]]; then
-	#	aniclust.py --fna "$sample"_"$minlength".contigs.fasta --ani clustering/"$sample"_"$minlength"_ani.tsv --out "$sample"_"$minlength"_clusters.tsv --min_ani "$cluster_identity" --min_qcov 0 --min_tcov "$cluster_cover"
-	#	mv "$sample"_"$minlength".contigs.fasta "$sample"_"$minlength"-unclustered.contigs.fasta
-	#	cut -f1 "$sample"_"$minlength"_clusters.tsv > "$sample"_cluster_representatives.txt
-	#	seqkit grep -j "$threads" -f "$sample"_cluster_representatives.txt -n -o "$sample"_"$minlength".contigs.fasta "$sample"_"$minlength"-unclustered.contigs.fasta
-	#	seqkit sort --by-length --reverse -o "$sample"_"$minlength".contigs.fasta "$sample"_"$minlength".contigs.fasta
-	#else
-	#	printf '\n%s\n' "[$(date "+%F %H:%M")] WARNING: Failed to calculate ANI for clustering: continuing with all contigs larger than "$minlength"bp."
-	#fi
+	#viper-per-sample-cluster.py -i "$sample"_"$minlength".contigs.fasta -d "$checkv_db" -o clustering/"$sample"_"$minlength" -t "$threads" --min-identity "$cluster_identity" --min-coverage "$cluster_cover"
+	makeblastdb -in "$sample"_"$minlength".contigs.fasta -dbtype nucl -out clustering/"$sample"_"$minlength"
+	if [[ ! $? -eq 0 ]]; then
+		>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: Failed to make blastdb for clustering."
+		exit 1
+	fi
+	blastn -query "$sample"_"$minlength".contigs.fasta -db clustering/"$sample"_"$minlength" -outfmt '6 std qlen slen' -max_target_seqs 10000 -perc_identity "$blastn_pid" -out clustering/"$sample"_"$minlength".tsv -num_threads "$threads"
+	anicalc.py -i clustering/"$sample"_"$minlength".tsv -o clustering/"$sample"_"$minlength"_ani.tsv
+	if [[ $? -eq 0 ]]; then
+		aniclust.py --fna "$sample"_"$minlength".contigs.fasta --ani clustering/"$sample"_"$minlength"_ani.tsv --out "$sample"_"$minlength"_clusters.tsv --min_ani "$cluster_identity" --min_qcov 0 --min_tcov "$cluster_cover"
+		mv "$sample"_"$minlength".contigs.fasta "$sample"_"$minlength"-unclustered.contigs.fasta
+		cut -f1 "$sample"_"$minlength"_clusters.tsv > "$sample"_cluster_representatives.txt
+		seqkit grep -j "$threads" -f "$sample"_cluster_representatives.txt -n -o "$sample"_"$minlength".contigs.fasta "$sample"_"$minlength"-unclustered.contigs.fasta
+		seqkit sort --by-length --reverse -o "$sample"_"$minlength".contigs.fasta "$sample"_"$minlength".contigs.fasta
+	else
+		printf '\n%s\n' "[$(date "+%F %H:%M")] WARNING: Failed to calculate ANI for clustering: continuing with all contigs larger than "$minlength"bp."
+	fi
 else
 	cp ASSEMBLY/"$sample".contigs.fasta CONTIGS/
 	cd CONTIGS/
 	printf '\n%s\n\n' "[INFO]: Filtering contigs larger than "$minlength"bp."
 	seqkit seq -m "$minlength" -j "$threads" "$sample".contigs.fasta > "$sample"_"$minlength".contigs.fasta
-	viper-per-sample-cluster.py -i "$sample"_"$minlength".contigs.fasta -d "$checkv_db" -o "$sample"_"$minlength" -t "$threads"
+	#viper-per-sample-cluster.py -i "$sample"_"$minlength".contigs.fasta -d "$checkv_db" -o "$sample"_"$minlength" -t "$threads"
 fi
 
 contigs="$sample"_"$minlength".contigs.fasta
