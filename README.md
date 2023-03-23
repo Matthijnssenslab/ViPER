@@ -196,6 +196,7 @@ multiqc -o multiQC .
 Also, some statistics (number of contigs above certain lengths, N50, L50, etc.) of the assembly are calculated with [Quast](http://quast.sourceforge.net/quast.html). These statistics can be found in the QC directory under `QUAST/report.tsv`.
 
 # HPC
+## PBS
 To run the ViPER script on an HPC with a Portable Batch System (PBS), you can submit `viper.pbs` after you modify the paths in the PBS script.
 
 A typical PBS script would look like this:
@@ -222,3 +223,28 @@ done < names.txt
 ```
 
 `names.txt` has the name of each sample on a new line.
+
+## Slurm
+To submit jobs with Slurm, the script should look like this:
+```bash
+#!/bin/bash
+#SBATCH --job-name="viper"
+#SBATCH --nodes="1"
+#SBATCH --ntasks-per-node="72"
+#SBATCH --ntasks="72"
+#SBATCH --time="1-00:00:00"
+
+cd $VSC_SCRATCH
+source activate viper
+export PATH="$CONDA_PREFIX/bin:$PATH" #To make sure software is found first in viper environment
+viper.sh -1 $line.R1.fastq.gz -2 $line.R2.fastq.gz -x 130 -p /path/to/primer/file -g /path/to/host/genome \
+	--triple-assembly -d /path/to/diamond/database -o $line -t 72
+```
+
+To submit the jobs with Slurm:
+```bash
+while read line; do
+sbatch --cluster=wice -o $line.log --export=ALL,line="$line" viper.slurm
+done < names.txt
+```
+
