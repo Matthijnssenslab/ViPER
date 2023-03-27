@@ -727,6 +727,12 @@ if [[ $triple -eq 1 ]]; then
 	sed -i "s/NODE_/NODE_A/g" "$sample".full.contigs.fasta
 	sed -i "s/>.*/&_${sample}/" "$sample".full.contigs.fasta
 
+	# Rename scaffolds too
+	mv scaffolds.fasta "$sample".full.scaffolds.fasta
+	#to add the sample names to your assemblies
+	sed -i "s/NODE_/NODE_A/g" "$sample".full.scaffolds.fasta
+	sed -i "s/>.*/&_${sample}/" "$sample".full.scaffolds.fasta
+
 	# 10% assembly
 	printf '\n\n%s\n' "[$(date "+%F %H:%M")] INFO: Starting second assembly with 10% of the reads."
 	cd "$outdir"/ASSEMBLY
@@ -738,6 +744,12 @@ if [[ $triple -eq 1 ]]; then
 	sed -i "s/NODE_/NODE_B/g" "$sample".10-percent.contigs.fasta
 	sed -i "s/>.*/&_${sample}/" "$sample".10-percent.contigs.fasta
 
+	# Rename scaffolds too
+	mv scaffolds.fasta $"$sample".10-percent.scaffolds.fasta
+	#to add the sample names to your assemblies
+	sed -i "s/NODE_/NODE_B/g" "$sample".10-percent.scaffolds.fasta
+	sed -i "s/>.*/&_${sample}/" "$sample".10-percent.scaffolds.fasta
+
 	# 1% assembly
 	printf '\n\n%s\n' "[$(date "+%F %H:%M")] INFO: Starting third assembly with 1% of the reads."
 	cd "$outdir"/ASSEMBLY
@@ -748,6 +760,13 @@ if [[ $triple -eq 1 ]]; then
 	#to add the sample names to your assemblies
 	sed -i "s/NODE_/NODE_C/g" "$sample".1-percent.contigs.fasta
 	sed -i "s/>.*/&_${sample}/" "$sample".1-percent.contigs.fasta
+
+	# Rename scaffolds too
+	mv scaffolds.fasta "$sample".1-percent.scaffolds.fasta
+	#to add the sample names to your assemblies
+	sed -i "s/NODE_/NODE_C/g" "$sample".1-percent.scaffolds.fasta
+	sed -i "s/>.*/&_${sample}/" "$sample".1-percent.scaffolds.fasta
+
 else
 	printf '\n%s\n' "[$(date "+%F %H:%M")] INFO: Starting assembly with metaSPAdes."
 	cd "$outdir"
@@ -762,6 +781,11 @@ else
 	mv contigs.fasta "$sample".contigs.fasta
 	#to add the sample names to your assemblies
 	sed -i "s/>.*/&_${sample}/" "$sample".contigs.fasta
+
+	# Rename scaffolds too
+	mv scaffolds.fasta "$sample".scaffolds.fasta
+	#to add the sample names to your assemblies
+	sed -i "s/>.*/&_${sample}/" "$sample".scaffolds.fasta
 fi
 printf '\n%s\n' "[$(date "+%F %H:%M")] INFO: Assembly finished!"
 ##############################################################################################################################################################
