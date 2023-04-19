@@ -21,6 +21,7 @@ cluster_identity=95
 blastn_pid=90
 crop=''
 spades_memory=''
+only_assembler=''
 skip_trimming=0
 move=1
 read1_given=0
@@ -66,6 +67,7 @@ OPTIONAL:
    --cluster-cover		% of the shortest sequence that should be covered during clustering. (default: 85)
    --cluster-identity		% of ANI for clustering contigs. (default: 95)
    --memory-limit		Memory (in GB) to be reserved for SPAdes assembly. (default: autodetected by SPAdes)
+   --only-assembler		Runs only the assembler of metaspades, useful when the error correction gets stuck but be cautious when using this option!
 
  Classification:
    -d | --diamond-path		Path to diamond database. If not given, Diamond and KronaTools will be skipped.
@@ -192,6 +194,9 @@ while [ ! $# -eq 0 ]; do
         		>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The given RAM limit is not an integer."
         		exit 1
         	fi
+        	;;
+		--only-assembler)
+			only_assembler="--only-assembler"
         	;;
         -x | --crop)
         	if [[ "$2" =~ ^[0-9]+$ ]]; then
@@ -715,10 +720,10 @@ if [[ $triple -eq 1 ]]; then
 	
 	if [[ $unpaired -eq 1 ]]; then
 		metaspades.py -1 "$final_read1" -2 "$final_read2" \
-		-s "$final_unpaired" -t "$threads" -k "$spades_k_mer" -o ASSEMBLY1 $spades_memory
+		-s "$final_unpaired" -t "$threads" -k "$spades_k_mer" -o ASSEMBLY1 $spades_memory $only_assembler
 	else
 		metaspades.py -1 "$final_read1" -2 "$final_read2" \
-		-t "$threads" -k "$spades_k_mer" -o ASSEMBLY1 $spades_memory
+		-t "$threads" -k "$spades_k_mer" -o ASSEMBLY1 $spades_memory $only_assembler
 	fi
 	
 	cd ASSEMBLY1
