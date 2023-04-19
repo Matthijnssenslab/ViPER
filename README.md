@@ -209,7 +209,7 @@ A typical PBS script would look like this:
 cd $VSC_SCRATCH
 source activate viper
 export PATH="$CONDA_PREFIX/bin:$PATH" #To make sure software is found first in viper environment
-viper.sh -1 $line.R1.fastq.gz -2 $line.R2.fastq.gz -x 130 -p /path/to/primer/file -g /path/to/host/genome \
+viper.sh -1 $line.R1.fastq.gz -2 $line.R2.fastq.gz -p /path/to/primer/file -g /path/to/host/genome \
 	--triple-assembly -d /path/to/diamond/database -o $line -t 36
 ```
 Note that the above PBS script is used when you want to submit multiple jobs (eg. for a set of samples), hence the variable `$line` which would be the sample name.
@@ -236,7 +236,7 @@ To submit jobs with Slurm, the script should look like this:
 cd $VSC_SCRATCH
 source activate viper
 export PATH="$CONDA_PREFIX/bin:$PATH" #To make sure software is found first in viper environment
-viper.sh -1 $line.R1.fastq.gz -2 $line.R2.fastq.gz -x 130 -p /path/to/primer/file -g /path/to/host/genome \
+viper.sh -1 $line.R1.fastq.gz -2 $line.R2.fastq.gz -p /path/to/primer/file -g /path/to/host/genome \
 	--triple-assembly -d /path/to/diamond/database -o $line -t 72
 ```
 
