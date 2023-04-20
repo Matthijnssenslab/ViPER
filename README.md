@@ -114,6 +114,9 @@ The resulting contigs have to be indexed by Bowtie2 and can subsequently be used
 
 `--memory-limit`
     Memory (in GB) to be reserved for SPAdes assembly. (default: 250)
+
+`--only-assembler`
+    Runs only the assembler of metaspades, useful when the error correction gets stuck. (Caution: assembly without error correction does not yield the same results as normal assembly)
     
 #### Triple assembly
 To overcome the problem of viral genomes breaking into multiple pieces during assembly due to huge coverage (which makes the resulting De Bruijn graph too difficult to interpret by the assembler), a subset of 10 and 1% of the original reads may be applied by `--triple-assembly`. These subsetted reads are also assembled by metaSPAdes and resulting contigs of all three assemblies (from original reads, 10% and 1% subset) are subsequently clustered together to remove redundancy in the contig set. This way shorter contigs belonging to the same genome, but from a different assembly, will be removed and only the most complete contigs will be retained. Clustering is performed by a combination of [BLAST+](https://www.ncbi.nlm.nih.gov/books/NBK279690/), `anicalc.py` and `aniclust.py` which are distributed as part of the [CheckV](https://bitbucket.org/berkeleylab/checkv/src/master/) package.

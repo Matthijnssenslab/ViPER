@@ -67,7 +67,7 @@ OPTIONAL:
    --cluster-cover		% of the shortest sequence that should be covered during clustering. (default: 85)
    --cluster-identity		% of ANI for clustering contigs. (default: 95)
    --memory-limit		Memory (in GB) to be reserved for SPAdes assembly. (default: autodetected by SPAdes)
-   --only-assembler		Runs only the assembler of metaspades, useful when the error correction gets stuck but be cautious when using this option!
+   --only-assembler		Runs only the assembler of metaspades, useful when the error correction gets stuck. (Caution: assembly without error correction does not yield the same results as normal assembly)
 
  Classification:
    -d | --diamond-path		Path to diamond database. If not given, Diamond and KronaTools will be skipped.
