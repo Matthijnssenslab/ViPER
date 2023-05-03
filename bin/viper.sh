@@ -118,11 +118,6 @@ seqkit stat "$1" | grep 'FASTA' &> /dev/null
 }
 
 ##### CHECKS #####
-#Check if output directory already exists
-if [[ -d "$outdir"/ASSEMBLY ]]; then
-	>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The output directory already exists."
-	exit 1
-fi
 
 #Check if all dependencies are installed in PATH
 commands='seqkit samtools ktClassifyBLAST metaspades.py trimmomatic pigz bwa-mem2 diamond python bowtie2 reformat.sh fastqc perl clumpify.sh quast.py blastn makeblastdb anicalc.py aniclust.py'
@@ -390,6 +385,11 @@ while [ ! $# -eq 0 ]; do
     shift
 done
 
+#Check if output directory already exists
+if [[ -d "$outdir"/ASSEMBLY ]]; then
+	>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The output directory already exists."
+	exit 1
+fi
 
 ### Check if all required options are given 
 if [[ $read1_given -eq 1 ]]; then
