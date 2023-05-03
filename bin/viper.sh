@@ -104,13 +104,17 @@ printf '%s\n' "$1" "$2" | sed -e '1h;G;s,\(.*\).*\n\1.*,\1,;h;$!d' | sed -E -e '
 }
 
 #Check fasta file
+#check_fasta() {
+#perl -ne '
+#    $id = />.+/;
+#    die "Empty $.\n" if $id && $p || $id && eof;
+#    $p = $id;
+#    die "Invalid char $1 ($.)\n" if !$id && /([^A-Za-z\n])/
+#    ' -- "$1"
+#    }
+
 check_fasta() {
-perl -ne '
-    $id = />.+/;
-    die "Empty $.\n" if $id && $p || $id && eof;
-    $p = $id;
-    die "Invalid char $1 ($.)\n" if !$id && /([^A-Za-z\n])/
-    ' -- "$1"
+seqkit stat "$1" | grep 'FASTA' &> /dev/null
     }
 
 ##### OPTIONS #####
