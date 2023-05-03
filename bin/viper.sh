@@ -115,7 +115,24 @@ printf '%s\n' "$1" "$2" | sed -e '1h;G;s,\(.*\).*\n\1.*,\1,;h;$!d' | sed -E -e '
 
 check_fasta() {
 seqkit stat "$1" | grep 'FASTA' &> /dev/null
-    }
+}
+
+##### CHECKS #####
+#Check if output directory already exists
+if [[ -d "$outdir"/ASSEMBLY ]]; then
+	>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The output directory already exists."
+	exit 1
+fi
+
+#Check if all dependencies are installed in PATH
+commands='seqkit samtools ktClassifyBLAST metaspades.py trimmomatic pigz bwa-mem2 diamond python bowtie2 reformat.sh fastqc perl clumpify.sh quast.py blastn makeblastdb anicalc.py aniclust.py'
+for i in $commands; do
+	command -v $i &> /dev/null
+	if [[ ! $? -eq 0 ]]; then
+    	printf '%s\n' "[$(date "+%F %H:%M")] ERROR: "$i" could not be found, please install "$i" in PATH or activate your conda environment."
+    	exit 1
+	fi
+done
 
 ##### OPTIONS #####
 
@@ -373,21 +390,6 @@ while [ ! $# -eq 0 ]; do
     shift
 done
 
-#Check if all dependencies are installed in PATH
-commands='seqkit samtools ktClassifyBLAST metaspades.py trimmomatic pigz bwa-mem2 diamond python bowtie2 reformat.sh fastqc perl clumpify.sh quast.py blastn makeblastdb anicalc.py aniclust.py'
-for i in $commands; do
-	command -v $i &> /dev/null
-	if [[ ! $? -eq 0 ]]; then
-    	printf '%s\n' "[$(date "+%F %H:%M")] ERROR: "$i" could not be found, please install "$i" in PATH or activate your conda environment."
-    	exit 1
-	fi
-done
-
-#Check if output directory already exists
-if [[ -d "$outdir"/ASSEMBLY ]]; then
-	>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The output directory already exists."
-	exit 1
-fi
 
 ### Check if all required options are given 
 if [[ $read1_given -eq 1 ]]; then
