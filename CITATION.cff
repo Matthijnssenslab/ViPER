@@ -7,9 +7,9 @@ authors:
     given-names: Lander
     orcid: "https://orcid.org/0000-0001-6847-2379"
 cff-version: "1.1.0"
-date-released: 2021-12-22
+date-released: 2023-05-27
 doi: "10.5281/zenodo.5502203"
 message: "If you use this software, please cite it using these metadata."
 title: ViPER
-version: "v1.1"
+version: "v1.2.1"
 ...
