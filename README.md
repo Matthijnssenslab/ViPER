@@ -8,9 +8,9 @@
 
 The ViPER (Virome Paired-End Reads pipeline) script is used by the Laboratory of Viral Metagenomics to process raw paired-end Illumina reads resulting from the [NetoVIR](https://doi.org/10.1038/srep16532) protocol. The NetoVIR protocol is a reproducible, modular approach to enrich multiple sample types (eg. human, insects, plants, etc.) for viruses which can then be sequenced.
 
-In this bioinformatics pipeline, reads are first trimmed by [Trimmomatic](https://github.com/usadellab/Trimmomatic). Subsequently, reads originating from the contaminome (sequenced and assembled negative controls) and the host genome can be removed by [Bowtie2](https://github.com/BenLangmead/bowtie2) and [samtools](http://www.htslib.org/). Left-over reads are further assembled into scaffolds by [metaSPAdes](https://github.com/ablab/spades).
+In this bioinformatics pipeline, reads are first trimmed by [Trimmomatic](https://github.com/usadellab/Trimmomatic). Subsequently, reads originating from the contaminome (sequenced and assembled negative controls) and the host genome can be removed by [Bowtie2](https://github.com/BenLangmead/bowtie2) and [samtools](http://www.htslib.org/). Left-over reads are further assembled into contigs by [metaSPAdes](https://github.com/ablab/spades).
 
-Final scaffolds can than be classified by [DIAMOND](https://github.com/bbuchfink/diamond) and [KronaTools](https://github.com/marbl/Krona/tree/master/KronaTools) with a lowest common ancestor approach. This is possible right after assembly with the `viper.sh` script, but is not required. Scaffolds can still be classified later on by the `viper-classify.sh` script. In addition, reads are mapped to the scaffolds with [bwa-mem2](https://github.com/bwa-mem2/bwa-mem2) to generate abundances for the Krona chart.
+Final contigs can than be classified by [DIAMOND](https://github.com/bbuchfink/diamond) and [KronaTools](https://github.com/marbl/Krona/tree/master/KronaTools) with a lowest common ancestor approach. This is possible right after assembly with the `viper.sh` script, but is not required. Contigs can still be classified later on by the `viper-classify.sh` script. In addition, reads are mapped to the contigs with [bwa-mem2](https://github.com/bwa-mem2/bwa-mem2) to generate abundances for the Krona chart.
 
 **Disclaimer:**</br>
 These scripts are made publicly available in an effort to standardize viromics and the way how virome samples are bioinformatically processed. Although you may freely use the scripts in this repo for your own analysis, support is not guaranteed.
@@ -23,7 +23,7 @@ These scripts are made publicly available in an effort to standardize viromics a
 - [Output](#Output)
     - [Reads](#READ)
     - [Assembly](#ASSEMBLY)
-    - [Scaffolds](#SCAFFOLDS)
+    - [Contigs](#CONTIGS)
     - [Diamond](#DIAMOND)
     - [Krona](#KRONA)
     - [Quality control](#QC)
@@ -99,19 +99,19 @@ The resulting contigs have to be indexed by Bowtie2 and can subsequently be used
     
 ### Assembly
 `-m | --min-length`
-    The minimum length for final assembled scaffolds. (default: 500)
+    The minimum length for final assembled contigs. (default: 500)
 
 `-k | --spades-k-mer`
     List of k-mer sizes for SPAdes (must be odd and less than 128). (default: 21,33,55,77)
 
 `--triple-assembly`
-    Will perform three *de novo* assemblies with metaspades on the full reads, a 10% and 1% subset of the reads. All assembled scaffolds will be concatenated and clustered together to remove redundancy (see also `--cluster-cover/identity`).
+    Will perform three *de novo* assemblies with metaspades on the full reads, a 10% and 1% subset of the reads. All assembled contigs will be concatenated and clustered together to remove redundancy (see also `--cluster-cover/identity`).
 
 `--cluster-cover`
     % of the shortest sequence that should be covered during clustering. (default: 85)
 
 `--cluster-identity`
-    % of ANI for clustering scaffolds. (default: 95)
+    % of ANI for clustering contigs. (default: 95)
 
 `--memory-limit`
     Memory (in GB) to be reserved for SPAdes assembly. (default: 250)
@@ -161,21 +161,21 @@ Original reads are moved to the `READ` folder in the given output directory, tri
 ### `ASSEMBLY`
 All output of metaSPAdes is directed to the `ASSEMBLY` folder, if `--triple-assembly` was specified the output of the three assemblies is stored in separate subfolders. `ASSEMBLY1` contains all files belonging to the assembly of the full set of reads, `ASSEMBLY2` of the 10% subsetted reads and `ASSEMBLY3` of the 1% subsetted reads. 
 
-### `SCAFFOLDS`
-The resulting fasta file with scaffolds of metaSPAdes is moved to a new directory `SCAFFOLDS`, scaffolds are subsequently filtered on length (by default >500bp) and stored in a new file <code><i>sample_length</i>.scaffolds.fasta</code>. This file can be used for DIAMOND and Krona or other analyses.
+### `CONTIGS`
+The resulting fasta file with contigs of metaSPAdes is moved to a new directory `CONTIGS`, contigs are subsequently filtered on length (by default >500bp) and stored in a new file <code><i>sample_length</i>.contigs.fasta</code>. This file can be used for DIAMOND and Krona or other analyses.
 
 **Triple assembly:**
-The scaffolds files from all three assemblies are copied to a `triple-assembly` folder and are concatenated into a file that contains all scaffolds which are filtered on the given bp length. Next, the scaffolds are clustered (see [above](#Triple-assembly)) to remove redundancy, which leads to some additional files:
-- <code><i>sample_length</i>-unclustered.scaffolds.fasta</code>
-    File with **all scaffolds** from three assemblies larger than the specified length.
-- <code><i>sample_length</i>.scaffolds.fasta</code>
-    File with **clustered scaffolds** larger than the specified length.
+The contigs files from all three assemblies are copied to a `triple-assembly` folder and are concatenated into a file that contains all contigs which are filtered on the given bp length. Next, the contigs are clustered (see [above](#Triple-assembly)) to remove redundancy, which leads to some additional files:
+- <code><i>sample_length</i>-unclustered.contigs.fasta</code>
+    File with **all contigs** from three assemblies larger than the specified length.
+- <code><i>sample_length</i>.contigs.fasta</code>
+    File with **clustered contigs** larger than the specified length.
 - <code><i>sample_length</i>_clusters.tsv</code>
-    File showing which scaffolds cluster together. First column is the representative, second column is a comma-separated list of scaffold names that cluster with the representative.
+    File showing which contigs cluster together. First column is the representative, second column is a comma-separated list of scaffold names that cluster with the representative.
 - <code><i>sample</i>_cluster_representatives.txt</code>
     File with only cluster representative names.
     
-Possibly, other files in this directory belong to the mapping of the reads to the scaffolds, e.g. the index files of bwa-mem2, the BAM and its index file and <code><i>sample</i>.magnitudes</code> which contains the read count for each scaffold (or cluster representative). 
+Possibly, other files in this directory belong to the mapping of the reads to the contigs, e.g. the index files of bwa-mem2, the BAM and its index file and <code><i>sample</i>.magnitudes</code> which contains the read count for each scaffold (or cluster representative). 
     
 ### `DIAMOND`
 Contains standard DIAMOND output. 
@@ -185,7 +185,7 @@ Contains standard DIAMOND output.
     Tabular BLAST file with 12 preconfigured fields:<br> `qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore`
     
 ### `KRONA`
-This directory contains an html file which shows an interactive Krona pie chart. This file is generated from the magnitudes and m8 file in the `SCAFFOLDS` and `DIAMOND` directories, respectively.
+This directory contains an html file which shows an interactive Krona pie chart. This file is generated from the magnitudes and m8 file in the `CONTIGS` and `DIAMOND` directories, respectively.
 
 ### `QC`
 By default some quality control checks are implemented in the `viper.sh` script. The quality of trimmed reads (forward, reverse and unpaired) is checked by [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/), this gives you separate files for each read file which can be combined by [MultiQC](https://multiqc.info/). Run following line in the QC directory after `viper.sh` has finished: 
