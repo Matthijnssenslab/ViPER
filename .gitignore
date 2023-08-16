@@ -1,3 +1,6 @@
+#package builder
+*.egg-info
+build/
 #Mac stuff:
 .DS_Store
 */.DS_Store
