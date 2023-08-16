@@ -462,7 +462,7 @@ fi
 
 ### Check if given diamond database is valid 
 if [[ $diamond -eq 1 ]]; then
-	dbinfo=$(diamond dbinfo -p "$threads" -d "$diamond_path" --quiet | grep 'version' | grep -o -E [0-9]+) > /dev/null 2>&1
+	dbinfo=$(diamond dbinfo -p "$threads" --db "$diamond_path" --quiet | grep 'version' | grep -o -E [0-9]+) > /dev/null 2>&1
 	if [[ ! $? -eq 0 ]]; then
 		>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The provided file is not a diamond database."
 		exit 1
@@ -857,8 +857,8 @@ if [[ $diamond -eq 1 ]]; then
 	mkdir -p DIAMOND
 	cd DIAMOND
 	printf '\n%s\n' "[$(date "+%F %H:%M")] INFO: Running Diamond!"
-	diamond blastx -d "$diamond_path" -q "$outdir"/CONTIGS/"$contigs" -a "$sample" -p "$threads" $diamond_sensitivity -c 1 -b 5 --tmpdir /dev/shm
-	diamond view -d "$diamond_path" -a "$sample" -o "$sample".m8 -p "$threads"
+	diamond blastx --db "$diamond_path" -q "$outdir"/CONTIGS/"$contigs" -a "$sample" -p "$threads" $diamond_sensitivity -c 1 -b 5 --tmpdir /dev/shm
+	diamond view -a "$sample" -o "$sample".m8 -p "$threads"
 	
 	if [[ ! $? -eq 0 ]]; then
 		>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: Something went wrong with Diamond."
