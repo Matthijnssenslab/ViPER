@@ -10,12 +10,14 @@ import textwrap
 from pathlib import Path
 
 import checkv
+import genomad
 import pandas as pd
 import pybedtools
 import pysam
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
+from genomad.modules import annotate, find_proviruses
 
 from clustering import viper_utilities as vu
 
@@ -25,10 +27,11 @@ logger = vu.get_logger()
 def parse_arguments():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.MetavarTypeHelpFormatter,
-        description=f"""This script takes the unclustered contigs from ViPER's triple assembly as input, 
-    runs CheckV (https://bitbucket.org/berkeleylab/checkv) to split proviruses in 'host' and 'viral' contigs, and
-    subsequently clusters the contigs. This script also ensures that contigs with contamination, duplications or contigs that
-    are longer than expected, as assessed by CheckV, do not end up as (wrong) cluster representatives.
+        description=f"""This script takes the unclustered contigs from ViPER's triple assembly as input,
+    runs geNomad to find proviruses (https://github.com/apcamargo/genomad), splits the proviruses in
+    'host' and 'viral' contigs and subsequently clusters the contigs. This script also runs CheckV
+    (https://bitbucket.org/berkeleylab/checkv) to ensure that contigs with contamination, duplications
+    or contigs that are longer than expected do not end up as (wrong) cluster representatives.
     """,
     )
     parser.add_argument(
@@ -41,13 +44,22 @@ def parse_arguments():
         help="Fasta file.",
     )
     parser.add_argument(
-        "-d",
-        "--database",
-        dest="db",
+        "-db1",
+        "--checkv_db",
+        dest="db1",
         required=True,
         type=str,
         metavar="PATH",
         help="CheckV database.",
+    )
+    parser.add_argument(
+        "-db2",
+        "--genomad_db",
+        dest="db2",
+        required=True,
+        type=str,
+        metavar="PATH",
+        help="geNomad database.",
     )
     parser.add_argument(
         "-o",
@@ -77,20 +89,108 @@ def parse_arguments():
         default=1000,
     )
     parser.add_argument(
+        "--sensitivity_marker_search",
+        dest="sens1",
+        type=float,
+        metavar="FLOAT",
+        help="Sensitivity of MMseqs2 marker search against geNomad markers DB. Higher values will annotate more proteins, but the search will be slower and consume more memory. x>=0.0",
+        default=4.2,
+    )
+    parser.add_argument(
+        "--evalue_marker_search",
+        dest="eval1",
+        type=float,
+        metavar="FLOAT",
+        help="Maximum accepted E-value in the MMseqs2 marker search",
+        default=0.001,
+    )
+    parser.add_argument(
+        "--splits",
+        dest="splits",
+        type=int,
+        metavar="INT",
+        help="Split the data for the MMseqs2 search. Higher values will reduce memory usage, but will make the search slower. If the MMseqs2 search is failing, try to increase the number of splits. x>=0",
+        default=0,
+    )
+    parser.add_argument(
+        "--crf-threshold",
+        dest="ct",
+        type=float,
+        metavar="FLOAT",
+        help="Minimum gene-level score to flag a provirus gene using the conditional random field model. Lower values will result in longer proviruses but will increase the probability of host genes being flagged as part of proviruses. 0.0<=x<=1.0",
+        default=0.4,
+    )
+    parser.add_argument(
+        "--marker-threshold",
+        dest="mt",
+        type=float,
+        metavar="FLOAT",
+        help="Minimum total virus marker score allowed for proviruses that do not encode integrases or are not located at scaffold edges. Lower values will increase the sensitivity but reduce the precision of the provirus identification procedure",
+        default=12.0,
+    )
+    parser.add_argument(
+        "--marker-threshold-integrase",
+        dest="mti",
+        type=float,
+        metavar="FLOAT",
+        help="Minimum total virus marker score allowed for proviruses that encode integrases",
+        default=8,
+    )
+    parser.add_argument(
+        "--marker-threshold-edge",
+        dest="mte",
+        type=float,
+        metavar="FLOAT",
+        help="Minimum total virus marker score allowed for proviruses that are located at scaffold edges",
+        default=8,
+    )
+    parser.add_argument(
+        "--max-integrase-distance",
+        dest="mid",
+        type=int,
+        metavar="INT",
+        help="Maximum allowed distance between provirus boundaries and the integrases used for boundary extension. x>=0",
+        default=10000,
+    )
+    parser.add_argument(
+        "--max-trna-distance",
+        dest="mtd",
+        type=int,
+        metavar="INT",
+        help="Maximum allowed distance between provirus boundaries and the tRNAs used for boundary extension. x>=0",
+        default=5000,
+    )
+    parser.add_argument(
+        "--sensitivity_integrase_search",
+        dest="sens2",
+        type=float,
+        metavar="FLOAT",
+        help="Sensitivity of MMseqs2 integrase search during geNomad proviruses identification. Higher values will annotate more proteins, but the search will be slower and consume more memory. x>=0.0",
+        default=8.2,
+    )
+    parser.add_argument(
+        "--evalue_integrase_search",
+        dest="eval2",
+        type=float,
+        metavar="FLOAT",
+        help="Maximum accepted E-value in the MMseqs2 integrase search",
+        default=0.001,
+    )
+    parser.add_argument(
         "--min-identity",
         dest="pid",
         type=int,
         metavar="INT",
-        help="Minimum average nucleotide identity (ANI) for sequences to be clustered. (default: %(default)s)",
-        default=95,
+        help="Minimum average nucleotide identity (ANI) for sequences to be clustered. (default: %(default)s). Caution: Possibly decrease if large dataset",
+        default=99, #change from 95 to 99 to prevent over-clustering during per-sample clustering
     )
     parser.add_argument(
         "--min-coverage",
         dest="cov",
         type=int,
         metavar="INT",
-        help="Minimum coverage %% of the shortest sequence that should be covered before clustering. (default: %(default)s)",
-        default=85,
+        help="Minimum coverage %% of the shortest sequence that should be covered before clustering. (default: %(default)s). Caution: Possibly decrease if large dataset",
+        default=99, #change from 85 to 99 to prevent over-clustering during per-sample clustering
     )
     parser.add_argument(
         "--keep-bed",
@@ -108,116 +208,98 @@ def parse_arguments():
     )
     return vars(parser.parse_args())
 
-
-def make_bed(contamination, output, minlength, keepBed=False):
-    """Function to generate BED files/dataframes from CheckV contamination output."""
-    # Read in contamination file from CheckV
-    df = pd.read_csv(contamination, sep="\t", dtype=object)
-
-    # Define columns to keep from the file
-    col_list = ["contig_id", "region_types", "region_lengths", "region_coords_bp"]
-
-    # Subset dataframe with only proviruses and the desired columns
-    df1 = df.loc[(df["provirus"] == "Yes"), col_list]
-
-    # Define possible contamination combo's
-    contamination_list = [
-        "viral,host",
-        "host,viral",
-        "host,viral,host",
-        "viral,host,viral",
-    ]
-
-    # Check if there is another contamination possibility than defined
-    if not df1.loc[~df1["region_types"].isin(contamination_list)].empty:
-        logger.warning("Other types of contamination:")
-        print(*df1["contig_id"].values, sep="\n")
-
-    # Subset the dataframe with only contaminations in 'contamination_list' and continue
-    df1 = df1.loc[df1["region_types"].isin(contamination_list)]
+def proviruses_bed_coordinates(proviruses, minlength, output):
+    """Function to generate the viral BED file from geNomad find_proviruses output."""
+    # Read in find_proviruses file from geNomad
+    viraldf = pd.read_csv(proviruses, sep="\t", dtype=object)
 
     # Check if there are proviruses found, otherwise return none
-    if df1.empty:
+    if viraldf.empty:
         logger.info(f"No proviruses found.")
         return None, None
 
-    # Create new df with viral/host regions split up
-    df2 = pd.concat(
-        [
-            df1["contig_id"],
-            df1[col_list[1]].str.split(",", expand=True),
-            df1[col_list[2]].str.split(",", expand=True),
-            df1[col_list[3]].str.split(",", expand=True),
-        ],
-        axis=1,
-    ).reset_index(drop=True)
-
-    # create list of dataframes with all contamination regions
-    data = []
-    for i in range(3):
-        try:
-            df2[i]
-        except:
-            if i == 0:
-                logger.info("No contamination in contigs.")
-        else:
-            tmpdf = pd.concat([df2["contig_id"], df2[i]], axis=1)
-            tmpdf.columns = col_list
-            data.append(tmpdf)
-    df3 = pd.concat(data).sort_index().reset_index(drop=True).dropna()
-
-    # Split the region coordinates in two columns and name them 'start'/'end'
-    df4 = pd.concat(
-        [
-            df3.drop("region_coords_bp", axis=1),
-            df3["region_coords_bp"].str.split("-", expand=True),
-        ],
-        axis=1,
-    )
-    df4.rename(columns={0: "start", 1: "end"}, inplace=True)
-
-    # Convert to numeric
-    df4[["region_lengths", "start", "end"]] = df4[
-        ["region_lengths", "start", "end"]
+    viraldf[["start", "end", "length"]] = viraldf[
+        ["start", "end", "length"]
     ].apply(pd.to_numeric, downcast="integer")
-    # convert from CheckV to BED coords
-    df4[["start", "end"]] -= 1
 
-    # Extract all viral regions from dataframe that are larger than the given minimum length
-    viraldf = df4.loc[
-        (df4["region_types"] == "viral") & (df4["region_lengths"] >= minlength),
-        ["contig_id", "region_lengths", "start", "end"],
-    ]
+    # Convert from Genomad to BED coords (only the start coordinate needs to be adjusted)
+    viraldf[["start"]] -= 1
+
+    # Keep only the proviral regions that are longer than the given minimum length
+    viraldf = viraldf.loc[(viraldf["length"] >= minlength),
+                         ["source_seq", "start", "end", "length"],]
+
     # Rename the contig id with info on the viral region length
     viraldf.loc[:, "bed_name"] = [
-        x.replace("_cov", "V" + str(y) + "_cov").replace(
+    	x.replace("_cov", "V" + str(y) + "_cov").replace(
             "_length", "V_length"
-        )  # Capital letter V?
-        for x, y in viraldf[["contig_id", "region_lengths"]].to_numpy()
+    	)
+        for x, y in viraldf[["source_seq", "length"]].to_numpy()
     ]
-    viraldf.drop("region_lengths", inplace=True, axis=1)
+    # Check for duplicates in the "bed_name" column (viral regions of same length)
+    if viraldf["bed_name"].duplicated().any():
+        logger.info(f"Warning: Two (or more) viral regions from the same contig have identical length, resulting in identical contig names.")
 
-    # Extract all host regions from dataframe that are larger than the given minimum length
-    hostdf = df4.loc[
-        (df4["region_types"] == "host") & (df4["region_lengths"] >= minlength),
-        ["contig_id", "region_lengths", "start", "end"],
-    ]
-    # Rename the contig id with info on the host region length
+    viraldf.drop("length", inplace=True, axis=1)
+    
+    # Write the viraldf to a BED file
+    viraldf.to_csv(output +'_viral.bed', sep='\t', header=False, index=False)
+
+    return viraldf
+
+def source_seq_lengths_function(viraldf, output):
+    """Function to generate a txt file with the lengths of the source sequences. It is needed to calculate the BED coordinates of the host regions"""
+    df = pd.DataFrame(viraldf['source_seq'])
+
+    # Create a "length" column and extract the length from the contig name
+    df['length'] = df['source_seq'].str.split('_').apply(lambda x: x[3])
+
+    # Remove duplicate source sequences (in case of multiple proviral regions in the same contig)
+    df = df.drop_duplicates(subset=['source_seq'])[['source_seq','length']]
+
+    df.to_csv(output + '_source_seq_lengths.txt', sep='\t', header=False, index=False)
+    return df
+
+
+def host_bed_coordinates(viralbed, source_seq_lengths, fasta, minlength, output, keepBed=False):
+    """Function to generate the host BED file using bedtools complement."""
+    # Generate a panda dataframe with the BED coordinates of the host regions
+    hostbed = pybedtools.BedTool().complement(i=viralbed, g=source_seq_lengths)
+    hostdf = pd.read_table(hostbed.fn, names=['source_seq', 'start', 'end'])
+
+    # Generate a sub-fasta file using the BED coordinates and the original fasta file
+    hostfasta = hostbed.sequence(fi=fasta)
+    fasta_file = open(hostfasta.seqfn).read()
+
+    # Calculate the lengths of sequences in the output_fasta file and add to the hostdf
+    lengths = []
+    for i in fasta_file.split("\n"):
+        if not i.startswith(">") and len(i)>0:
+            lengths.append(len(i))
+    hostdf['length']=lengths
+
+    # Keep only the proviral regions that are longer than the given minimum length
+    hostdf = hostdf[hostdf["length"] >= minlength]
+
+    # Rename the contig id with info on the viral region length
     hostdf.loc[:, "bed_name"] = [
         x.replace("_cov", "H" + str(y) + "_cov").replace(
             "_length", "H_length"
-        )  # Capital letter H?
-        for x, y in hostdf[["contig_id", "region_lengths"]].to_numpy()
+        )
+        for x, y in hostdf[["source_seq", "length"]].to_numpy()
     ]
-    hostdf.drop("region_lengths", inplace=True, axis=1)
+    # Check for duplicates in the "bed_name" column (host regions of same length)
+    if hostdf["bed_name"].duplicated().any():
+        logger.info(f"Warning: Two (or more) host regions from the same contig have identical length, resulting in identical contig names.")
 
-    # Keep BED files for debugging purposes
+    hostdf.drop("length", inplace=True, axis=1)
+
+    # Keep BED file for debugging purposes
     if keepBed:
-        viraldf.to_csv(output + "_viral.bed", sep="\t", header=False, index=False)
-        hostdf.to_csv(output + "_host.bed", sep="\t", header=False, index=False)
-
-    return viraldf, hostdf
-
+        hostdf.to_csv(output + '_host.bed', sep='\t', header=False, index=False)
+    else:
+        os.remove(output +'_viral.bed')
+    return hostdf
 
 def bedtools(bed, fasta):
     """Function to run bedtools with BED file from string on fasta sequences."""
@@ -239,8 +321,7 @@ def bedtools_fasta_dict(fasta_text):
             fasta_dict[key] = i
     return fasta_dict
 
-
-def quality_summary_selection(checkv_summary):
+def selection(checkv_summary, viraldf):
     """Function to select sequences with duplication/high k-mer warnings as assessed by CheckV."""
     # Read in CheckV's quality_summary file
     df = pd.read_csv(checkv_summary, sep="\t", dtype={"warnings": "str"})
@@ -248,25 +329,27 @@ def quality_summary_selection(checkv_summary):
     df["warnings"] = df["warnings"].fillna(
         ""
     )  # TO DO: find faster way to get rid of Nan
-
     include = set()
     exclude = set()
+
     # Define warnings
     warnings = [
         "high kmer_freq may indicate large duplication",
         "contig >1.5x longer than expected genome length",
     ]
+    # Create a list of all the unique contigs names in the "source_seq" column of viraldf
+    proviruses_source_seq_names = set(list(viraldf["source_seq"]))
+
     # Change quality_summary df in dictionary
     df_dict = df.to_dict("records")
     for row in df_dict:
         # Select any provirus contig with duplication/longer than expected warning and add it to the 'exclude' set
-        if row["provirus"] == "Yes" or any(x in row["warnings"] for x in warnings):
+        if row["contig_id"] in proviruses_source_seq_names or any(x in row["warnings"] for x in warnings):
             exclude.add(row["contig_id"])
 
         # Select all contigs with warnings and add it to the 'include' set
         if any(x in row["warnings"] for x in warnings):
             include.add(row["contig_id"])
-
     return include, exclude
 
 
@@ -315,17 +398,13 @@ def main():
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    # Make tmp file for CheckV and other calculations
+    # Make tmp file for CheckV and geNomad outputs
     tmpdir = tempfile.mkdtemp(dir=output_dir)
-    # if os.path.exists("tmp_clustering"):
-    #    shutil.rmtree("tmp_clustering")
-    #
-    # os.mkdir("tmp_clustering")
 
     # Define CheckV arguments
     checkv_arguments = {
         "input": fasta,
-        "db": args["db"],
+        "db": args["db1"],
         "output": tmpdir,
         "threads": args["threads"],
         "restart": True,
@@ -339,21 +418,44 @@ def main():
     checkv.end_to_end.main(checkv_arguments)
 
     # Define CheckV output paths
-    contamination = os.path.join(tmpdir, "contamination.tsv")
     qsummary = os.path.join(tmpdir, "quality_summary.tsv")
 
-    logger.info(
-        f"Excluding contigs with contamination, longer than expected and duplication issues..."
-    )
+    logger.info(f"Running geNomad...")
 
-    # Return sets of contigs to include/exclude
-    include, exclude = quality_summary_selection(qsummary)
+    # Run geNomad annotate
+    genomad.annotate.main(input_path=Path(fasta), output_path=Path(tmpdir), database_path=Path(args["db2"]), \
+    use_minimal_db=False, restart=True, threads=args["threads"], verbose=True, conservative_taxonomy=False, \
+    sensitivity=args["sens1"], evalue=args["eval1"], splits=args["splits"], cleanup=True)
+    
+    # Run geNomad find-proviruses
+    genomad.find_proviruses.main(input_path=Path(fasta), output_path=Path(tmpdir), database_path=Path(args["db2"]), \
+    cleanup=False, restart=True, skip_integrase_identification=False, skip_trna_identification=False, \
+    threads=args["threads"], verbose=True, crf_threshold=args["ct"], marker_threshold=args["mt"], \
+    marker_threshold_integrase=args["mti"], marker_threshold_edge=args["mte"], max_integrase_distance=args["mid"], \
+    max_trna_distance=args["mtd"], sensitivity=args["sens2"], evalue=args["eval2"])
+
+    # Define geNomad output paths
+    genomad_find_proviruses_output_folder = str(Path(fasta).stem)+'_find_proviruses'
+    genomad_tsv_output_file = str(Path(fasta).stem)+'_provirus.tsv'
+    proviruses = os.path.join(tmpdir, genomad_find_proviruses_output_folder, genomad_tsv_output_file)
 
     logger.newline()
     logger.info(f"Making BED for host and viral regions...")
 
     # Make viral and host BED dfs for provirus contigs
-    viralbed, hostbed = make_bed(contamination, output, minlength, keepBed=bed)
+    viralbed = proviruses_bed_coordinates(proviruses, minlength, output)
+    source_seq_lengths = source_seq_lengths_function(viralbed, output)
+    hostbed = host_bed_coordinates(output + "_viral.bed", output + "_source_seq_lengths.txt", fasta, minlength, output, keepBed=bed)
+
+    logger.newline()
+    logger.info(
+        f"Excluding contigs with contamination, longer than expected and duplication issues..."
+    )
+    #Remove the source_seq_lengths.txt and host.fasta files
+    os.remove(output + "_source_seq_lengths.txt")
+    
+    # Return sets of contigs to include/exclude
+    include, exclude = selection(qsummary, viralbed)
 
     # Define dictionaries
     hdict = {}
@@ -368,7 +470,7 @@ def main():
         # Make fasta for host/viral regions
         host = bedtools(hostbed.to_csv(header=None, index=False, sep="\t"), fasta)
         viral = bedtools(viralbed.to_csv(header=None, index=False, sep="\t"), fasta)
-
+        
         # Add them to a dictionary (key: contig_id, value: sequence)
         hdict = bedtools_fasta_dict(host)
         vdict = bedtools_fasta_dict(viral)
@@ -377,11 +479,11 @@ def main():
         # Also add the new names to a 'viral exclude' set
         viral_exclude = set()
         for row in viralbed.to_dict("records"):
-            if row["contig_id"] in include:
-                include.remove(row["contig_id"])
+            if row["source_seq"] in include:
+                include.remove(row["source_seq"])
                 include.add(row["bed_name"])
                 viral_exclude.add(row["bed_name"])
-
+        
         # Remove provirus contigs with duplication/longer than expected issues from provirus fasta dictionary
         clean_v_dict = {
             k: v for k, v in vdict.items() if k.lstrip(">") not in viral_exclude
