@@ -216,7 +216,7 @@ def proviruses_bed_coordinates(proviruses, minlength, output):
     # Check if there are proviruses found, otherwise return none
     if viraldf.empty:
         logger.info(f"No proviruses found.")
-        return None, None
+        return None
 
     viraldf[["start", "end", "length"]] = viraldf[
         ["start", "end", "length"]
@@ -241,7 +241,7 @@ def proviruses_bed_coordinates(proviruses, minlength, output):
         logger.info(f"Warning: Two (or more) viral regions from the same contig have identical length, resulting in identical contig names.")
 
     viraldf.drop("length", inplace=True, axis=1)
-    
+
     # Write the viraldf to a BED file
     viraldf.to_csv(output +'_viral.bed', sep='\t', header=False, index=False)
 
@@ -338,18 +338,21 @@ def selection(checkv_summary, viraldf):
         "contig >1.5x longer than expected genome length",
     ]
     # Create a list of all the unique contigs names in the "source_seq" column of viraldf
-    proviruses_source_seq_names = set(list(viraldf["source_seq"]))
-
-    # Change quality_summary df in dictionary
     df_dict = df.to_dict("records")
-    for row in df_dict:
-        # Select any provirus contig with duplication/longer than expected warning and add it to the 'exclude' set
-        if row["contig_id"] in proviruses_source_seq_names or any(x in row["warnings"] for x in warnings):
-            exclude.add(row["contig_id"])
+    if not viraldf==None:
+        proviruses_source_seq_names = set(list(viraldf["source_seq"]))
+        # Change quality_summary df in dictionary
+        for row in df_dict:
+            # Select any provirus contig with duplication/longer than expected warning and add it to the 'exclude' set
+            if row["contig_id"] in proviruses_source_seq_names or any(x in row["warnings"] for x in warnings):
+                exclude.add(row["contig_id"])
+    else:
+        for row in df_dict:
+            # Select any provirus contig with duplication/longer than expected warning and add it to the 'exclude' set
+            if any(x in row["warnings"] for x in warnings):
+                exclude.add(row["contig_id"])
+                include.add(row["contig_id"])
 
-        # Select all contigs with warnings and add it to the 'include' set
-        if any(x in row["warnings"] for x in warnings):
-            include.add(row["contig_id"])
     return include, exclude
 
 
@@ -426,7 +429,7 @@ def main():
     genomad.annotate.main(input_path=Path(fasta), output_path=Path(tmpdir), database_path=Path(args["db2"]), \
     use_minimal_db=False, restart=True, threads=args["threads"], verbose=True, conservative_taxonomy=False, \
     sensitivity=args["sens1"], evalue=args["eval1"], splits=args["splits"], cleanup=True)
-    
+
     # Run geNomad find-proviruses
     genomad.find_proviruses.main(input_path=Path(fasta), output_path=Path(tmpdir), database_path=Path(args["db2"]), \
     cleanup=False, restart=True, skip_integrase_identification=False, skip_trna_identification=False, \
@@ -444,16 +447,19 @@ def main():
 
     # Make viral and host BED dfs for provirus contigs
     viralbed = proviruses_bed_coordinates(proviruses, minlength, output)
-    source_seq_lengths = source_seq_lengths_function(viralbed, output)
-    hostbed = host_bed_coordinates(output + "_viral.bed", output + "_source_seq_lengths.txt", fasta, minlength, output, keepBed=bed)
+    if not viralbed == None:
+        source_seq_lengths = source_seq_lengths_function(viralbed, output)
+        hostbed = host_bed_coordinates(output + "_viral.bed", output + "_source_seq_lengths.txt", fasta, minlength, output, keepBed=bed)
+        os.remove(output + "_source_seq_lengths.txt")
+    else:
+        source_seq_lengths=None
+        hostbed=None
 
     logger.newline()
     logger.info(
         f"Excluding contigs with contamination, longer than expected and duplication issues..."
     )
-    #Remove the source_seq_lengths.txt and host.fasta files
-    os.remove(output + "_source_seq_lengths.txt")
-    
+
     # Return sets of contigs to include/exclude
     include, exclude = selection(qsummary, viralbed)
 
@@ -470,7 +476,7 @@ def main():
         # Make fasta for host/viral regions
         host = bedtools(hostbed.to_csv(header=None, index=False, sep="\t"), fasta)
         viral = bedtools(viralbed.to_csv(header=None, index=False, sep="\t"), fasta)
-        
+
         # Add them to a dictionary (key: contig_id, value: sequence)
         hdict = bedtools_fasta_dict(host)
         vdict = bedtools_fasta_dict(viral)
@@ -483,7 +489,7 @@ def main():
                 include.remove(row["source_seq"])
                 include.add(row["bed_name"])
                 viral_exclude.add(row["bed_name"])
-        
+
         # Remove provirus contigs with duplication/longer than expected issues from provirus fasta dictionary
         clean_v_dict = {
             k: v for k, v in vdict.items() if k.lstrip(">") not in viral_exclude
