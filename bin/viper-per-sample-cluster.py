@@ -482,7 +482,7 @@ def main():
 
     # Make viral and host BED dfs for provirus contigs
     viralbed = proviruses_bed_coordinates(proviruses, minlength, output)
-    if not viralbed == None:
+    if viralbed is not None:
         source_seq_lengths = source_seq_lengths_function(viralbed, output)
         hostbed = host_bed_coordinates(
             output + "_viral.bed",
@@ -494,7 +494,6 @@ def main():
         )
         os.remove(output + "_source_seq_lengths.txt")
     else:
-        source_seq_lengths = None
         hostbed = None
 
     logger.newline()
