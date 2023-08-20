@@ -222,7 +222,7 @@ def proviruses_bed_coordinates(proviruses, minlength, output):
     )
 
     # Convert from Genomad to BED coords (only the start coordinate needs to be adjusted)
-    viraldf[["start"]] -= 1
+    viraldf["start"] -= 1
 
     # Keep only the proviral regions that are longer than the given minimum length
     viraldf = viraldf.loc[
@@ -237,8 +237,8 @@ def proviruses_bed_coordinates(proviruses, minlength, output):
     ]
     # Check for duplicates in the "bed_name" column (viral regions of same length)
     if viraldf["bed_name"].duplicated().any():
-        logger.info(
-            f"Warning: Two (or more) viral regions from the same contig have identical length, resulting in identical contig names."
+        logger.warning(
+            f"Two (or more) viral regions from the same contig have identical length, resulting in identical contig names."
         )
 
     viraldf.drop("length", inplace=True, axis=1)
@@ -292,8 +292,8 @@ def host_bed_coordinates(
     ]
     # Check for duplicates in the "bed_name" column (host regions of same length)
     if hostdf["bed_name"].duplicated().any():
-        logger.info(
-            f"Warning: Two (or more) host regions from the same contig have identical length, resulting in identical contig names."
+        logger.warning(
+            f"Two (or more) host regions from the same contig have identical length, resulting in identical contig names."
         )
 
     hostdf.drop("length", inplace=True, axis=1)
@@ -345,7 +345,7 @@ def selection(checkv_summary, viraldf):
     ]
     # Create a list of all the unique contigs names in the "source_seq" column of viraldf
     df_dict = df.to_dict("records")
-    if not viraldf is not None:
+    if viraldf is not None:
         proviruses_source_seq_names = set(list(viraldf["source_seq"]))
         # Change quality_summary df in dictionary
         for row in df_dict:
