@@ -260,7 +260,6 @@ def source_seq_lengths_function(viraldf, output):
     df = df.drop_duplicates(subset=["source_seq"])[["source_seq", "length"]]
 
     df.to_csv(output + "_source_seq_lengths.txt", sep="\t", header=False, index=False)
-    return df
 
 
 def host_bed_coordinates(
@@ -327,8 +326,8 @@ def bedtools_fasta_dict(fasta_text):
     return fasta_dict
 
 
-def selection(checkv_summary, viraldf):
-    """Function to select sequences with duplication/high k-mer warnings as assessed by CheckV."""
+def lists_proviruses_warnings(checkv_summary, viraldf):
+    """Function to select sequences that are proviruses and/or have duplication/high k-mer warnings as assessed by CheckV."""
     # Read in CheckV's quality_summary file
     df = pd.read_csv(checkv_summary, sep="\t", dtype={"warnings": "str"})
     # Fill NA in warning column with empty string
@@ -343,20 +342,24 @@ def selection(checkv_summary, viraldf):
         "high kmer_freq may indicate large duplication",
         "contig >1.5x longer than expected genome length",
     ]
-    # Create a list of all the unique contigs names in the "source_seq" column of viraldf
+    # Change quality_summary df in dictionary
     df_dict = df.to_dict("records")
     if viraldf is not None:
-        proviruses_source_seq_names = set(list(viraldf["source_seq"]))
-        # Change quality_summary df in dictionary
+        # Create a list of all the unique contigs names in the "source_seq" column of viraldf
+        proviruses_source_seq_names = set(viraldf["source_seq"])
+
         for row in df_dict:
-            # Select any provirus contig with duplication/longer than expected warning and add it to the 'exclude' set
+            # create exclude list: containing contigs that are proviruses or have CheckV warnings
             if row["contig_id"] in proviruses_source_seq_names or any(
                 x in row["warnings"] for x in warnings
             ):
                 exclude.add(row["contig_id"])
+
+            # create include list: containing contigs with CheckV warnings
+            if any(x in row["warnings"] for x in warnings):
+                include.add(row["contig_id"])
     else:
         for row in df_dict:
-            # Select any provirus contig with duplication/longer than expected warning and add it to the 'exclude' set
             if any(x in row["warnings"] for x in warnings):
                 exclude.add(row["contig_id"])
                 include.add(row["contig_id"])
@@ -483,7 +486,7 @@ def main():
     # Make viral and host BED dfs for provirus contigs
     viralbed = proviruses_bed_coordinates(proviruses, minlength, output)
     if viralbed is not None:
-    source_seq_lengths_function(viralbed, output)
+        source_seq_lengths_function(viralbed, output)
         hostbed = host_bed_coordinates(
             output + "_viral.bed",
             output + "_source_seq_lengths.txt",
@@ -501,8 +504,8 @@ def main():
         f"Excluding contigs with contamination, longer than expected and duplication issues..."
     )
 
-    # Return sets of contigs to include/exclude
-    include, exclude = selection(qsummary, viralbed)
+    # Return sets of contigs to include/exclude for further clustering
+    include, exclude = lists_proviruses_warnings(qsummary, viralbed)
 
     # Define dictionaries
     hdict = {}
