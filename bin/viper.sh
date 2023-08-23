@@ -811,26 +811,26 @@ if [[ $triple -eq 1 ]]; then
 	cp "$outdir"/ASSEMBLY/ASSEMBLY*/*.contigs.fasta triple-assembly/
 	cat triple-assembly/*.contigs.fasta > "$sample"_all.contigs.fasta
 	printf '\n%s\n' "[$(date "+%F %H:%M")] INFO: Filtering contigs larger than "$minlength"bp."
-	seqkit seq -m "$minlength" -j "$threads" "$sample"_all.contigs.fasta > "$sample"_"$minlength".contigs.fasta
-	seqkit sort --by-length --reverse -o "$sample"_"$minlength".contigs.fasta "$sample"_"$minlength".contigs.fasta
+	seqkit seq -m "$minlength" -j "$threads" "$sample"_all.contigs.fasta > "$sample"_"$minlength"-unclustered.contigs.fasta
+	seqkit sort --by-length --reverse -o "$sample"_"$minlength"-unclustered.contigs.fasta "$sample"_"$minlength"-unclustered.contigs.fasta
 	printf '\n%s\n' "[$(date "+%F %H:%M")] INFO: Clustering contigs on "$cluster_identity"% identity over "$cluster_cover"% of the length."
-	#Cluster_genomes.pl -f "$sample"_"$minlength".contigs.fasta -c "$cluster_cover" -i "$cluster_identity" -t "$threads"
+	#Cluster_genomes.pl -f "$sample"_"$minlength"-unclustered.contigs.fasta -c "$cluster_cover" -i "$cluster_identity" -t "$threads"
 	mkdir clustering
-	makeblastdb -in "$sample"_"$minlength".contigs.fasta -dbtype nucl -out clustering/"$sample"_"$minlength"
+	makeblastdb -in "$sample"_"$minlength"-unclustered.contigs.fasta -dbtype nucl -out clustering/"$sample"_"$minlength"
 	if [[ ! $? -eq 0 ]]; then
 		>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: Failed to make blastdb for clustering."
 		exit 1
 	fi
-	blastn -query "$sample"_"$minlength".contigs.fasta -db clustering/"$sample"_"$minlength" -outfmt '6 std qlen slen' -max_target_seqs 10000 -perc_identity "$blastn_pid" -out clustering/"$sample"_"$minlength".tsv -num_threads "$threads"
+	blastn -query "$sample"_"$minlength"-unclustered.contigs.fasta -db clustering/"$sample"_"$minlength" -outfmt '6 std qlen slen' -max_target_seqs 10000 -perc_identity "$blastn_pid" -out clustering/"$sample"_"$minlength".tsv -num_threads "$threads"
 	anicalc.py -i clustering/"$sample"_"$minlength".tsv -o clustering/"$sample"_"$minlength"_ani.tsv
 	if [[ $? -eq 0 ]]; then
-		aniclust.py --fna "$sample"_"$minlength".contigs.fasta --ani clustering/"$sample"_"$minlength"_ani.tsv --out "$sample"_"$minlength"_clusters.tsv --min_ani "$cluster_identity" --min_qcov 0 --min_tcov "$cluster_cover"
-		mv "$sample"_"$minlength".contigs.fasta "$sample"_"$minlength"-unclustered.contigs.fasta
+		aniclust.py --fna "$sample"_"$minlength"-unclustered.contigs.fasta --ani clustering/"$sample"_"$minlength"_ani.tsv --out "$sample"_"$minlength"_clusters.tsv --min_ani "$cluster_identity" --min_qcov 0 --min_tcov "$cluster_cover"
 		cut -f1 "$sample"_"$minlength"_clusters.tsv > "$sample"_cluster_representatives.txt
 		seqkit grep -j "$threads" -f "$sample"_cluster_representatives.txt -n -o "$sample"_"$minlength".contigs.fasta "$sample"_"$minlength"-unclustered.contigs.fasta
 		seqkit sort --by-length --reverse -o "$sample"_"$minlength".contigs.fasta "$sample"_"$minlength".contigs.fasta
 	else
 		printf '\n%s\n' "[$(date "+%F %H:%M")] WARNING: Failed to calculate ANI for clustering: continuing with all contigs larger than "$minlength"bp."
+                cp "$sample"_"$minlength"-unclustered.contigs.fasta "$sample"_"$minlength".contigs.fasta
 	fi
 else
 	cp ASSEMBLY/"$sample".contigs.fasta CONTIGS/
