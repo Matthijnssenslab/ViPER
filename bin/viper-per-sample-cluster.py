@@ -191,6 +191,13 @@ def parse_arguments():
         default=99,  # change from 85 to 99 to prevent over-clustering during per-sample clustering
     )
     parser.add_argument(
+        "--genomad-score-calibration",
+        dest="gnmd_calib",
+        action="store_true",
+        help="Perform score calibration when running geNomad. Only use if all samples have at least 1000 sequences (or on concatenated input). (default: %(default)s)",
+        default=False,
+    )
+    parser.add_argument(
         "--keep-bed",
         dest="bed",
         action="store_true",
@@ -207,7 +214,7 @@ def parse_arguments():
     return vars(parser.parse_args())
 
 
-def proviruses_bed_coordinates(proviruses, minlength, output):
+def proviruses_bed_coordinates(proviruses, minlength, output, gnmd_calib):
     """Function to generate the viral BED file from geNomad find_proviruses output."""
     # Read in find_proviruses file from geNomad
     viraldf = pd.read_csv(proviruses, sep="\t", dtype=object)
@@ -217,9 +224,20 @@ def proviruses_bed_coordinates(proviruses, minlength, output):
         logger.info(f"No proviruses found.")
         return None
 
-    viraldf[["start", "end", "length"]] = viraldf[["start", "end", "length"]].apply(
-        pd.to_numeric, downcast="integer"
-    )
+    if gnmd_calib:
+        viraldf = viraldf[viraldf["topology"]=="Provirus"]
+        if viraldf.empty:
+            logger.info(f"No proviruses found.")
+            return None
+        viraldf["source_seq"] = viraldf["seq_name"].str.split(r'\|provirus', expand=True)[0]
+        viraldf[["start", "end"]] = viraldf["coordinates"].str.split(pat = '-', expand = True)
+        viraldf[["start", "end", "length"]] = viraldf[["start", "end", "length"]].apply(
+            pd.to_numeric, downcast="integer"
+        )
+    else:
+        viraldf[["start", "end", "length"]] = viraldf[["start", "end", "length"]].apply(
+            pd.to_numeric, downcast="integer"
+        )
 
     # Convert from Genomad to BED coords (only the start coordinate needs to be adjusted)
     viraldf["start"] -= 1
@@ -403,6 +421,7 @@ def main():
     output = args["output"]
     output_name = Path(args["output"]).name
     output_dir = Path(args["output"]).parent
+    gnmd_calib = args["gnmd_calib"]
 
     # If debugging option is set also keep the bed files, regardless of the original value
     if debug:
@@ -472,19 +491,77 @@ def main():
         sensitivity=args["sens_integrase"],
         evalue=args["eval_integrase"],
     )
-
+    if gnmd_calib:
+        # Run geNomad marker classification
+        genomad.marker_classification.main(
+            input_path=Path(fasta),
+            output_path=Path(tmpdir),
+            database_path=Path(args["genomad_db"]),
+            restart=True,
+            threads=args["threads"],
+            verbose=True,
+        )
+        # Run geNomad neural network classification
+        genomad.nn_classification.main(
+            input_path=Path(fasta),
+            output_path=Path(tmpdir),
+            single_window=False,
+            batch_size=128,
+            restart=True,
+            threads=args["threads"],
+            verbose=True,
+            cleanup=True,
+        )
+        # Run geNomad aggregated classification
+        genomad.aggregated_classification.main(
+            input_path=Path(fasta),
+            output_path=Path(tmpdir),
+            restart=True,
+            verbose=True,
+        )
+        # Run geNomad score calibration
+        genomad.score_calibration.main(
+            input_path=Path(fasta),
+            output_path=Path(tmpdir),
+            composition="auto",
+            force_auto=False,
+            verbose=True,
+        )
+        # Run geNomad summary
+        genomad.summary.main(
+            input_path=Path(fasta),
+            output_path=Path(tmpdir),
+            verbose=True,
+            min_score=0.7,
+            max_fdr=0.1,
+            min_plasmid_marker_enrichment=0.0,
+            min_virus_marker_enrichment=0.0,
+            min_plasmid_hallmarks=0,
+            min_plasmid_hallmarks_short_seqs=1,
+            min_virus_hallmarks=0,
+            min_virus_hallmarks_short_seqs=1,
+            max_uscg=4,
+        )
     # Define geNomad output paths
     genomad_find_proviruses_output_folder = str(Path(fasta).stem) + "_find_proviruses"
     genomad_tsv_output_file = str(Path(fasta).stem) + "_provirus.tsv"
-    proviruses = os.path.join(
-        tmpdir, genomad_find_proviruses_output_folder, genomad_tsv_output_file
-    )
 
+    genomad_summary_output_folder = str(Path(fasta).stem) + "_summary"
+    genomad_summary_tsv_output_file = str(Path(fasta).stem) + "_virus_summary.tsv"
+
+    if gnmd_calib:
+        proviruses = os.path.join(
+            tmpdir, genomad_summary_output_folder, genomad_summary_tsv_output_file
+        )
+    else:      
+        proviruses = os.path.join(
+            tmpdir, genomad_find_proviruses_output_folder, genomad_tsv_output_file
+        )
     logger.newline()
     logger.info(f"Making BED for host and viral regions...")
 
     # Make viral and host BED dfs for provirus contigs
-    viralbed = proviruses_bed_coordinates(proviruses, minlength, output)
+    viralbed = proviruses_bed_coordinates(proviruses, minlength, output, gnmd_calib)
     if viralbed is not None:
         source_seq_lengths_function(viralbed, output)
         hostbed = host_bed_coordinates(
