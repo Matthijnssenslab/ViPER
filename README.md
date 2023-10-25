@@ -1,4 +1,4 @@
-<a href="https://rega.kuleuven.be/cev/viralmetagenomics"><img src="https://github.com/Matthijnssenslab/ViPER/blob/a33a5a4a56396c33dd14e7e5662e2cc8719977eb/JM_icon.png" height="12.5%" width="12.5%" align="right" target="_blank"/></a>
+<a href="https://rega.kuleuven.be/cev/viralmetagenomics" target="_blank"><img src="https://github.com/Matthijnssenslab/ViPER/blob/a33a5a4a56396c33dd14e7e5662e2cc8719977eb/JM_icon.png" height="12.5%" width="12.5%" align="right"/></a>
 
 # ViPER - Virome Paired-End Reads pipeline
 [![Generic badge](https://img.shields.io/badge/GitHub-MatthijnssensLab-brightgreen?logo=github)](https://github.com/Matthijnssenslab)
