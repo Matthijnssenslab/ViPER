@@ -1,16 +1,14 @@
 # YAML 1.2
 ---
 authors: 
+      affiliation: "Laboratory of Viral Metagenomics, KU Leuven"
     - family-names: "De Coninck"
       given-names: "Lander"
       orcid: "https://orcid.org/0000-0001-6847-2379"
-      affiliation: "Laboratory of Viral Metagenomics, KU Leuven"
     - family-names: "Faye"
       given-names: "Lisa"
-      affiliation: "Laboratory of Viral Metagenomics, KU Leuven"
     - family-names: "Basler"
       given-names: "Nikolas"
-      affiliation: "Laboratory of Viral Metagenomics, KU Leuven"
 cff-version: "1.2.0"
 date-released: 2023-10-25
 doi: "10.5281/zenodo.5502203"
