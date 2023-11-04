@@ -78,6 +78,8 @@ GENERAL:
    -o | --outdir		Path where results will be stored and read files will be copied to (default: current directory).
    -n | --name			Prefix to the output files, default is to use the common prefix of the read files or the date + timestamp, if no common prefix is found. Special characters are not allowed.
    -t | --threads		Number of threads to use. (default: 4)
+   --bb-threads			Set the number of threads for BBMap tools (clumpify.sh, reformat.sh). (default: number of threads given to --threads)
+				Can be set to one if viper.sh fails on these steps with 'Exception in thread' error.
    --keep-reads			Do not move the read files to the output directory, but keep them in place.
 
 EOF
@@ -101,6 +103,13 @@ echo "$file"
 #Find common prefix (and remove trailing dashes, dots, underscores and R)
 common_prefix() {
 printf '%s\n' "$1" "$2" | sed -e '1h;G;s,\(.*\).*\n\1.*,\1,;h;$!d' | sed -E -e 's/[-_\.]+R?[-_\.]*$//g'
+}
+
+check_error() {
+	if [[ ! $? -eq 0 ]]; then
+    	>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: ViPER finished abnormally. Exit code: $1"
+    	exit $1
+	fi
 }
 
 #Check fasta file
@@ -360,6 +369,21 @@ while [ ! $# -eq 0 ]; do
         		fi
         	fi
         	;;
+		--bb-threads)
+        	if [[ "$2" =~ ^[0-9]+$ ]]; then
+        		bbthreads=$2
+        		shift
+        	else
+        		if [[ "$2" = -* ]]; then
+					bbthreads=1
+        			>&2 printf '%s\n' "[$(date "+%F %H:%M")] WARNING: No specified threads given, continuing with 1 thread for BBsuite tools."
+        		else
+					bbthreads=1
+        			>&2 printf '%s\n' "[$(date "+%F %H:%M")] WARNING: Given threads not an integer, continuing with 1 thread for BBsuite tools."
+        			shift
+        		fi
+        	fi
+        	;;
         -n | --name)
         	if [[ "$2" == *['!'@#\$%^\&*()+]* ]]; then
         		:
@@ -384,6 +408,12 @@ while [ ! $# -eq 0 ]; do
     esac
     shift
 done
+
+#Set bbthreads
+if [[ -z "$bbthreads" ]]; then
+    bbthreads="$threads"
+fi
+
 
 #Check if output directory already exists
 if [[ -d "$outdir"/ASSEMBLY ]]; then
@@ -568,12 +598,14 @@ if [[ $skip_trimming -eq 0 ]]; then
 		out="$sample".trimmed.R1.fastq.gz \
 		out2="$sample".trimmed.R2.fastq.gz \
 		ziplevel=9 \
-		deleteinput=t
+		deleteinput=t \
+		threads=$bbthreads
 	clumpify.sh reorder \
 		in="$sample".TRIM.unpaired.fastq.gz \
 		out="$sample".trimmed.unpaired.fastq.gz \
 		ziplevel=9 \
-		deleteinput=t
+		deleteinput=t \
+		threads=$bbthreads
 
 	final_read1=$(get_path "$sample".trimmed.R1.fastq.gz)
 	final_read2=$(get_path "$sample".trimmed.R2.fastq.gz)
@@ -702,12 +734,12 @@ if [[ $triple -eq 1 ]]; then
 	# 10% of reads
 	reformat.sh in="$final_read1" in2="$final_read2" \
 		out1="$sample".subset_10.R1.fastq.gz out2="$sample".subset_10.R2.fastq.gz \
-		samplerate=0.1 sampleseed=1234
+		samplerate=0.1 sampleseed=1234 threads=$bbthreads
 
 	# 1% of reads
 	reformat.sh in="$final_read1" in2="$final_read2" \
 		out1="$sample".subset_1.R1.fastq.gz out2="$sample".subset_1.R2.fastq.gz \
-		samplerate=0.01 sampleseed=1234
+		samplerate=0.01 sampleseed=1234 threads=$bbthreads
 
 	subset10_R1=$(get_path "$sample".subset_10.R1.fastq.gz)
 	subset10_R2=$(get_path "$sample".subset_10.R2.fastq.gz)
@@ -731,6 +763,8 @@ if [[ $triple -eq 1 ]]; then
 		metaspades.py -1 "$final_read1" -2 "$final_read2" \
 		-t "$threads" -k "$spades_k_mer" -o ASSEMBLY1 $spades_memory $only_assembler
 	fi
+
+	check_error 2
 	
 	cd ASSEMBLY1
 	mv contigs.fasta "$sample".full.contigs.fasta
@@ -749,6 +783,9 @@ if [[ $triple -eq 1 ]]; then
 	cd "$outdir"/ASSEMBLY
 	metaspades.py -1 "$subset10_R1" -2 "$subset10_R2" \
 	-t "$threads" -k "$spades_k_mer" -o ASSEMBLY2 $spades_memory
+	
+	check_error 3
+
 	cd ASSEMBLY2
 	mv contigs.fasta $"$sample".10-percent.contigs.fasta
 	#to add the sample names to your assemblies
@@ -766,6 +803,9 @@ if [[ $triple -eq 1 ]]; then
 	cd "$outdir"/ASSEMBLY
 	metaspades.py -1 "$subset1_R1" -2 "$subset1_R2" \
 	-t "$threads" -k "$spades_k_mer" -o ASSEMBLY3 $spades_memory
+	
+	check_error 4
+	
 	cd ASSEMBLY3
 	mv contigs.fasta "$sample".1-percent.contigs.fasta
 	#to add the sample names to your assemblies
@@ -904,5 +944,5 @@ fi
 if [[ $? -eq 0 ]]; then
 	printf '\n%s\n' "[$(date "+%F %H:%M")] INFO: ViPER finished successfully! "
 else
-	>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: ViPER finished abnormally."
+	check_error 5
 fi
