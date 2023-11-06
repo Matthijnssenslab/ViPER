@@ -16,4 +16,7 @@ build/
 *.fa*
 */*.m8
 */*.magnitudes*
+
+#Drawio files
 *.drawio
+

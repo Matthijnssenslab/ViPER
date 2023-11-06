@@ -31,7 +31,10 @@ These scripts are made publicly available in an effort to standardize viromics a
 
 ## Overview
 <p align="center">
-    <img src="img/ViPER.svg">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="img/ViPER_dark.svg">
+      <img src="img/ViPER.svg">
+    </picture>
 </p>
 
 # Setup
