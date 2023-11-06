@@ -1,4 +1,4 @@
-<a href="https://rega.kuleuven.be/cev/viralmetagenomics" target="_blank"><img src="https://github.com/Matthijnssenslab/ViPER/blob/a33a5a4a56396c33dd14e7e5662e2cc8719977eb/JM_icon.png" height="12.5%" width="12.5%" align="right"/></a>
+<a href="https://rega.kuleuven.be/cev/viralmetagenomics" target="_blank"><img src="img/JM_icon.png" height="12.5%" width="12.5%" align="right"/></a>
 
 # ViPER - Virome Paired-End Reads pipeline
 [![Generic badge](https://img.shields.io/badge/GitHub-MatthijnssensLab-brightgreen?logo=github)](https://github.com/Matthijnssenslab)
@@ -31,7 +31,7 @@ These scripts are made publicly available in an effort to standardize viromics a
 
 ## Overview
 <p align="center">
-    <img src="ViPER.svg">
+    <img src="img/ViPER.svg">
 </p>
 
 # Setup
