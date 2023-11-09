@@ -21,6 +21,6 @@ dependencies:
   - python=3.10.12
   - quast=5.2.0
   - samtools=1.17
-  - seqkit=2.5.0
+  - seqkit=2.5.1
   - spades=3.15.5
   - trimmomatic=0.39
