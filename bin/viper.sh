@@ -28,6 +28,7 @@ read1_given=0
 read2_given=0
 unpaired=0
 sample=''
+warning=0
 
 ##### FUNCTIONS #####
 #Help function
@@ -363,8 +364,10 @@ while [ ! $# -eq 0 ]; do
         	else
         		if [[ "$2" = -* ]]; then
         			>&2 printf '%s\n' "[$(date "+%F %H:%M")] WARNING: No specified threads given, continuing with 4 threads."
+					warning=$((warning+1))
         		else
         			>&2 printf '%s\n' "[$(date "+%F %H:%M")] WARNING: Given threads not an integer, continuing with 4 threads."
+					warning=$((warning+1))
         			shift
         		fi
         	fi
@@ -377,9 +380,11 @@ while [ ! $# -eq 0 ]; do
         		if [[ "$2" = -* ]]; then
 					bbthreads=1
         			>&2 printf '%s\n' "[$(date "+%F %H:%M")] WARNING: No specified threads given, continuing with 1 thread for BBsuite tools."
+					warning=$((warning+1))
         		else
 					bbthreads=1
         			>&2 printf '%s\n' "[$(date "+%F %H:%M")] WARNING: Given threads not an integer, continuing with 1 thread for BBsuite tools."
+					warning=$((warning+1))
         			shift
         		fi
         	fi
@@ -537,6 +542,7 @@ fi
 #Test if there is a common prefix
 if [[ -z "$sample" ]]; then
       >&2 printf '\n%s\n' "[$(date "+%F %H:%M")] WARNING: No common prefix found between reads, continuing with date and timestamp as name. You might want to check if forward and reverse reads are from the same sample."
+	  warning=$((warning+1))
       sample=$(date "+%Y%m%d-%H_%M_%S")
 fi
 
@@ -870,6 +876,7 @@ if [[ $triple -eq 1 ]]; then
 		seqkit sort --by-length --reverse -o "$sample"_"$minlength".contigs.fasta "$sample"_"$minlength".contigs.fasta
 	else
 		printf '\n%s\n' "[$(date "+%F %H:%M")] WARNING: Failed to calculate ANI for clustering: continuing with all contigs larger than "$minlength"bp."
+				warning=$((warning+1))
                 cp "$sample"_"$minlength"-unclustered.contigs.fasta "$sample"_"$minlength".contigs.fasta
 	fi
 else
@@ -941,8 +948,10 @@ else
 	retfunc 0
 fi
 
-if [[ $? -eq 0 ]]; then
-	printf '\n%s\n' "[$(date "+%F %H:%M")] INFO: ViPER finished successfully! "
-else
+if [[ ! $? -eq 0 ]]; then
 	check_error 5
+elif [[ $warning -gt 0 ]]; then
+	printf '\n%s\n' "[$(date "+%F %H:%M")] INFO: ViPER finished with $warning warning(s)."
+else
+	printf '\n%s\n' "[$(date "+%F %H:%M")] INFO: ViPER finished successfully!"
 fi
