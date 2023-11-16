@@ -17,9 +17,11 @@ import pysam
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
-from genomad.modules import annotate, find_proviruses
 
 from clustering import viper_utilities as vu
+
+# from genomad.modules import annotate, find_proviruses
+
 
 logger = vu.get_logger()
 
@@ -192,7 +194,7 @@ def parse_arguments():
     )
     parser.add_argument(
         "--keep-bed",
-        dest="bed",
+        dest="keep_bed",
         action="store_true",
         help="Keep BED files with viral and host regions. (default: %(default)s)",
         default=False,
@@ -393,34 +395,13 @@ def biopython_fasta(dictionary):
     return biopython_dict
 
 
-def main():
-    # Parse script arguments
-    args = parse_arguments()
-    fasta = args["fasta"]
-    minlength = args["length"]
-    bed = args["bed"]
-    debug = args["debug"]
-    output = args["output"]
-    output_name = Path(args["output"]).name
-    output_dir = Path(args["output"]).parent
-
-    # If debugging option is set also keep the bed files, regardless of the original value
-    if debug:
-        bed = True
-
-    # Create output directory if it doesn't exist
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
-    # Make tmp file for CheckV and geNomad outputs
-    tmpdir = tempfile.mkdtemp(dir=output_dir)
-
+def run_checkv(fasta, checkv_db, threads, tmpdir):
     # Define CheckV arguments
     checkv_arguments = {
         "input": fasta,
-        "db": args["checkv_db"],
+        "db": checkv_db,
         "output": tmpdir,
-        "threads": args["threads"],
+        "threads": threads,
         "restart": True,
         "quiet": False,
         "remove_tmp": True,
@@ -431,24 +412,39 @@ def main():
     # Run CheckV
     checkv.end_to_end.main(checkv_arguments)
 
-    # Define CheckV output paths
-    qsummary = os.path.join(tmpdir, "quality_summary.tsv")
 
+def run_genomad(
+    fasta,
+    tmpdir,
+    genomad_db,
+    threads,
+    sens_marker,
+    eval_marker,
+    splits,
+    ct,
+    mt,
+    mti,
+    mte,
+    mid,
+    mtd,
+    sens_integrase,
+    eval_integrase,
+):
     logger.info(f"Running geNomad...")
 
     # Run geNomad annotate
     genomad.annotate.main(
         input_path=Path(fasta),
         output_path=Path(tmpdir),
-        database_path=Path(args["genomad_db"]),
+        database_path=Path(genomad_db),
         use_minimal_db=False,
         restart=True,
-        threads=args["threads"],
+        threads=threads,
         verbose=True,
         conservative_taxonomy=False,
-        sensitivity=args["sens_marker"],
-        evalue=args["eval_marker"],
-        splits=args["splits"],
+        sensitivity=sens_marker,
+        evalue=eval_marker,
+        splits=splits,
         cleanup=True,
     )
 
@@ -456,22 +452,33 @@ def main():
     genomad.find_proviruses.main(
         input_path=Path(fasta),
         output_path=Path(tmpdir),
-        database_path=Path(args["genomad_db"]),
+        database_path=Path(genomad_db),
         cleanup=False,
         restart=True,
         skip_integrase_identification=False,
         skip_trna_identification=False,
-        threads=args["threads"],
+        threads=threads,
         verbose=True,
-        crf_threshold=args["ct"],
-        marker_threshold=args["mt"],
-        marker_threshold_integrase=args["mti"],
-        marker_threshold_edge=args["mte"],
-        max_integrase_distance=args["mid"],
-        max_trna_distance=args["mtd"],
-        sensitivity=args["sens_integrase"],
-        evalue=args["eval_integrase"],
+        crf_threshold=ct,
+        marker_threshold=mt,
+        marker_threshold_integrase=mti,
+        marker_threshold_edge=mte,
+        max_integrase_distance=mid,
+        max_trna_distance=mtd,
+        sensitivity=sens_integrase,
+        evalue=eval_integrase,
     )
+
+
+def exclude_sequences_for_clustering(
+    fasta, output, output_name, tmpdir, minlength, keep_bed, debug
+):
+    # If debugging option is set also keep the bed files, regardless of the original value
+    if debug:
+        keep_bed = True
+
+    # Define CheckV output paths
+    qsummary = os.path.join(tmpdir, "quality_summary.tsv")
 
     # Define geNomad output paths
     genomad_find_proviruses_output_folder = str(Path(fasta).stem) + "_find_proviruses"
@@ -493,7 +500,7 @@ def main():
             fasta,
             minlength,
             output,
-            keepBed=bed,
+            keepBed=keep_bed,
         )
         os.remove(output + "_source_seq_lengths.txt")
     else:
@@ -581,13 +588,68 @@ def main():
         }
         write_fasta(reinclude_dict, output + "_re-include.fasta")
 
+
+def main():
+    # Parse script arguments
+    args = parse_arguments()
+    fasta = args["fasta"]
+    minlength = args["length"]
+    keep_bed = args["keep_bed"]
+    debug = args["debug"]
+    output = args["output"]
+    output_name = Path(args["output"]).name
+    output_dir = Path(args["output"]).parent
+    threads = args["threads"]
+
+    # Create output directory if it doesn't exist
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    # Make tmp file for CheckV and geNomad outputs
+    tmpdir = tempfile.mkdtemp(dir=output_dir)
+
+    # Run CheckV
+    checkv_dict = {
+        "fasta": fasta,
+        "tmpdir": tmpdir,
+        "checkv_db": args["checkv_db"],
+        "threads": threads,
+    }
+    run_checkv(**checkv_dict)
+
+    # Run genomad
+    genomad_dict = {
+        "fasta": fasta,
+        "tmpdir": tmpdir,
+        "genomad_db": args["genomad_db"],
+        "threads": threads,
+        "sens_marker": args["sens_marker"],
+        "eval_marker": args["eval_marker"],
+        "splits": args["splits"],
+        "ct": args["ct"],
+        "mt": args["mt"],
+        "mti": args["mti"],
+        "mte": args["mte"],
+        "mid": args["mid"],
+        "mtd": args["mtd"],
+        "sens_integrase": args["sens_integrase"],
+        "eval_integrase": args["eval_integrase"],
+    }
+
+    run_genomad(**genomad_dict)
+
+    # Make fastas with sequences to cluster and sequences to reinclude in a later clustering stage (across your study)
+    exclude_sequences_for_clustering(
+        fasta, output, output_name, tmpdir, minlength, keep_bed, debug
+    )
+
     logger.newline()
 
     # Cluster remaining sequences
     vu.clustering(
         os.path.join(tmpdir, output_name + "_to_cluster.fasta"),
         output + "_clustered",
-        args["threads"],
+        threads,
         args["pid"],
         args["cov"],
         write_clusters=True,
