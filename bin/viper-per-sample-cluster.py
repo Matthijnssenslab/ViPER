@@ -10,7 +10,7 @@ import textwrap
 from pathlib import Path
 
 import checkv
-import genomad
+import genomad  # TODO: check if this is necessary when modules are loaded separately
 import pandas as pd
 import pybedtools
 import pysam
@@ -91,7 +91,7 @@ def parse_arguments():
         dest="sens_marker",
         type=float,
         metavar="FLOAT",
-        help="Sensitivity of MMseqs2 marker search against geNomad markers DB. Higher values will annotate more proteins, but the search will be slower and consume more memory. x>=0.0",
+        help="Sensitivity of MMseqs2 marker search against geNomad markers DB. Higher values will annotate more proteins, but the search will be slower and consume more memory. x>=0.0 (default: %(default)s)",
         default=4.2,
     )
     parser.add_argument(
@@ -99,7 +99,7 @@ def parse_arguments():
         dest="eval_marker",
         type=float,
         metavar="FLOAT",
-        help="Maximum accepted E-value in the MMseqs2 marker search",
+        help="Maximum accepted E-value in the MMseqs2 marker search (default: %(default)s)",
         default=0.001,
     )
     parser.add_argument(
@@ -107,7 +107,7 @@ def parse_arguments():
         dest="splits",
         type=int,
         metavar="INT",
-        help="Split the data for the MMseqs2 search. Higher values will reduce memory usage, but will make the search slower. If the MMseqs2 search is failing, try to increase the number of splits. x>=0",
+        help="Split the data for the MMseqs2 search. Higher values will reduce memory usage, but will make the search slower. If the MMseqs2 search is failing, try to increase the number of splits. x>=0 (default: %(default)s)",
         default=0,
     )
     parser.add_argument(
@@ -115,7 +115,7 @@ def parse_arguments():
         dest="ct",
         type=float,
         metavar="FLOAT",
-        help="Minimum gene-level score to flag a provirus gene using the conditional random field model. Lower values will result in longer proviruses but will increase the probability of host genes being flagged as part of proviruses. 0.0<=x<=1.0",
+        help="Minimum gene-level score to flag a provirus gene using the conditional random field model. Lower values will result in longer proviruses but will increase the probability of host genes being flagged as part of proviruses. 0.0<=x<=1.0 (default: %(default)s)",
         default=0.4,
     )
     parser.add_argument(
@@ -123,7 +123,7 @@ def parse_arguments():
         dest="mt",
         type=float,
         metavar="FLOAT",
-        help="Minimum total virus marker score allowed for proviruses that do not encode integrases or are not located at scaffold edges. Lower values will increase the sensitivity but reduce the precision of the provirus identification procedure",
+        help="Minimum total virus marker score allowed for proviruses that do not encode integrases or are not located at scaffold edges. Lower values will increase the sensitivity but reduce the precision of the provirus identification procedure (default: %(default)s)",
         default=12.0,
     )
     parser.add_argument(
@@ -131,7 +131,7 @@ def parse_arguments():
         dest="mti",
         type=float,
         metavar="FLOAT",
-        help="Minimum total virus marker score allowed for proviruses that encode integrases",
+        help="Minimum total virus marker score allowed for proviruses that encode integrases (default: %(default)s)",
         default=8,
     )
     parser.add_argument(
@@ -139,7 +139,7 @@ def parse_arguments():
         dest="mte",
         type=float,
         metavar="FLOAT",
-        help="Minimum total virus marker score allowed for proviruses that are located at scaffold edges",
+        help="Minimum total virus marker score allowed for proviruses that are located at scaffold edges (default: %(default)s)",
         default=8,
     )
     parser.add_argument(
@@ -147,7 +147,7 @@ def parse_arguments():
         dest="mid",
         type=int,
         metavar="INT",
-        help="Maximum allowed distance between provirus boundaries and the integrases used for boundary extension. x>=0",
+        help="Maximum allowed distance between provirus boundaries and the integrases used for boundary extension. x>=0 (default: %(default)s)",
         default=10000,
     )
     parser.add_argument(
@@ -155,7 +155,7 @@ def parse_arguments():
         dest="mtd",
         type=int,
         metavar="INT",
-        help="Maximum allowed distance between provirus boundaries and the tRNAs used for boundary extension. x>=0",
+        help="Maximum allowed distance between provirus boundaries and the tRNAs used for boundary extension. x>=0 (default: %(default)s)",
         default=5000,
     )
     parser.add_argument(
@@ -163,7 +163,7 @@ def parse_arguments():
         dest="sens_integrase",
         type=float,
         metavar="FLOAT",
-        help="Sensitivity of MMseqs2 integrase search during geNomad proviruses identification. Higher values will annotate more proteins, but the search will be slower and consume more memory. x>=0.0",
+        help="Sensitivity of MMseqs2 integrase search during geNomad proviruses identification. Higher values will annotate more proteins, but the search will be slower and consume more memory. x>=0.0 (default: %(default)s)",
         default=8.2,
     )
     parser.add_argument(
@@ -171,7 +171,7 @@ def parse_arguments():
         dest="eval_integrase",
         type=float,
         metavar="FLOAT",
-        help="Maximum accepted E-value in the MMseqs2 integrase search",
+        help="Maximum accepted E-value in the MMseqs2 integrase search (default: %(default)s)",
         default=0.001,
     )
     parser.add_argument(
@@ -179,7 +179,7 @@ def parse_arguments():
         dest="pid",
         type=int,
         metavar="INT",
-        help="Minimum average nucleotide identity (ANI) for sequences to be clustered. (default: %(default)s). Caution: Possibly decrease if large dataset",
+        help="Minimum average nucleotide identity (ANI) for sequences to be clustered. (default: %(default)s). Caution: Possibly decrease if large dataset (default: %(default)s)",
         default=99,  # change from 95 to 99 to prevent over-clustering during per-sample clustering
     )
     parser.add_argument(
@@ -187,7 +187,7 @@ def parse_arguments():
         dest="cov",
         type=int,
         metavar="INT",
-        help="Minimum coverage %% of the shortest sequence that should be covered before clustering. (default: %(default)s). Caution: Possibly decrease if large dataset",
+        help="Minimum coverage %% of the shortest sequence that should be covered before clustering. (default: %(default)s). Caution: Possibly decrease if large dataset (default: %(default)s)",
         default=99,  # change from 85 to 99 to prevent over-clustering during per-sample clustering
     )
     parser.add_argument(
