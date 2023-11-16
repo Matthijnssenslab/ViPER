@@ -65,6 +65,7 @@ def get_logger():
 
 logger = get_logger()
 
+
 # CheckV Copyright (c) 2020, The Regents of the University of California,
 # through Lawrence Berkeley National Laboratory (subject to receipt of
 # any required approvals from the U.S. Dept. of Energy). All rights reserved.
@@ -131,7 +132,6 @@ def compute_ani(alns):
 
 
 def compute_cov(alns):
-
     # merge qcoords
     coords = sorted([a["qcoords"] for a in alns])
     nr_coords = [coords[0]]
@@ -276,7 +276,7 @@ def aniclust(
     logger.info(f"%s total clusters" % len(clust_to_seqs))
 
     # write
-    logger.info("writing clusters...")
+    # logger.info("writing clusters...")
     # keep = set()
     # for seq_id, mem_ids in clust_to_seqs.items():
     #    keep.add(seq_id)
