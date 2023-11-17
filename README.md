@@ -1,4 +1,4 @@
-<a href="https://rega.kuleuven.be/cev/viralmetagenomics"><img src="https://rega.kuleuven.be/cev/viralmetagenomics/pictures/lovm/image_preview" height="12.5%" width="12.5%" align="right" target="_blank"/></a>
+<a href="https://rega.kuleuven.be/cev/viralmetagenomics" target="_blank"><img src="img/JM_icon.png" height="12.5%" width="12.5%" align="right"/></a>
 
 # ViPER - Virome Paired-End Reads pipeline
 [![Generic badge](https://img.shields.io/badge/GitHub-MatthijnssensLab-brightgreen?logo=github)](https://github.com/Matthijnssenslab)
@@ -31,7 +31,10 @@ These scripts are made publicly available in an effort to standardize viromics a
 
 ## Overview
 <p align="center">
-    <img src="ViPER.svg">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="img/ViPER_dark.svg">
+      <img src="img/ViPER.svg">
+    </picture>
 </p>
 
 # Setup
@@ -115,6 +118,9 @@ The resulting contigs have to be indexed by Bowtie2 and can subsequently be used
 
 `--memory-limit`
     Memory (in GB) to be reserved for SPAdes assembly. (default: 250)
+
+`--only-assembler`
+    Runs only the assembler of metaspades, useful when the error correction gets stuck. (Caution: assembly without error correction does not yield the same results as normal assembly)
     
 #### Triple assembly
 To overcome the problem of viral genomes breaking into multiple pieces during assembly due to huge coverage (which makes the resulting De Bruijn graph too difficult to interpret by the assembler), a subset of 10 and 1% of the original reads may be applied by `--triple-assembly`. These subsetted reads are also assembled by metaSPAdes and resulting contigs of all three assemblies (from original reads, 10% and 1% subset) are subsequently clustered together to remove redundancy in the contig set. This way shorter contigs belonging to the same genome, but from a different assembly, will be removed and only the most complete contigs will be retained. Clustering is performed by a combination of [BLAST+](https://www.ncbi.nlm.nih.gov/books/NBK279690/), `anicalc.py` and `aniclust.py` which are distributed as part of the [CheckV](https://bitbucket.org/berkeleylab/checkv/src/master/) package.
@@ -210,7 +216,7 @@ A typical PBS script would look like this:
 cd $VSC_SCRATCH
 source activate viper
 export PATH="$CONDA_PREFIX/bin:$PATH" #To make sure software is found first in viper environment
-viper.sh -1 $line.R1.fastq.gz -2 $line.R2.fastq.gz -x 130 -p /path/to/primer/file -g /path/to/host/genome \
+viper.sh -1 $line.R1.fastq.gz -2 $line.R2.fastq.gz -p /path/to/primer/file -g /path/to/host/genome \
 	--triple-assembly -d /path/to/diamond/database -o $line -t 36
 ```
 Note that the above PBS script is used when you want to submit multiple jobs (eg. for a set of samples), hence the variable `$line` which would be the sample name.
@@ -237,7 +243,7 @@ To submit jobs with Slurm, the script should look like this:
 cd $VSC_SCRATCH
 source activate viper
 export PATH="$CONDA_PREFIX/bin:$PATH" #To make sure software is found first in viper environment
-viper.sh -1 $line.R1.fastq.gz -2 $line.R2.fastq.gz -x 130 -p /path/to/primer/file -g /path/to/host/genome \
+viper.sh -1 $line.R1.fastq.gz -2 $line.R2.fastq.gz -p /path/to/primer/file -g /path/to/host/genome \
 	--triple-assembly -d /path/to/diamond/database -o $line -t 72
 ```
 
@@ -247,4 +253,3 @@ while read line; do
 sbatch --cluster=wice -o $line.log --export=ALL,line="$line" viper.slurm
 done < names.txt
 ```
-
