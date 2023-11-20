@@ -86,11 +86,11 @@ while [ ! $# -eq 0 ]; do
         			fasta=$(get_path "$2")
         			shift
         		else
-        			>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The given input file is not a fasta file."
+        			>&2 printf '%s\n' "[$(date "+%F %H:%M:%S")] ERROR: The given input file is not a fasta file."
         			exit 1
         		fi
         	else
-        		>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The given input file does not exist or is empty."
+        		>&2 printf '%s\n' "[$(date "+%F %H:%M:%S")] ERROR: The given input file does not exist or is empty."
         		exit 1
         	fi
         	;;
@@ -99,7 +99,7 @@ while [ ! $# -eq 0 ]; do
         		read1_path=$(get_path "$2") 
         		shift
         	else
-        		>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The given forward read file does not exist or is empty."
+        		>&2 printf '%s\n' "[$(date "+%F %H:%M:%S")] ERROR: The given forward read file does not exist or is empty."
         		exit 1
         	fi
         	;;
@@ -108,7 +108,7 @@ while [ ! $# -eq 0 ]; do
         		read2_path=$(get_path "$2")
         		shift
         	else
-        		>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The given reverse read file does not exist or is empty."
+        		>&2 printf '%s\n' "[$(date "+%F %H:%M:%S")] ERROR: The given reverse read file does not exist or is empty."
         		exit 1
         	fi
         	;;
@@ -117,7 +117,7 @@ while [ ! $# -eq 0 ]; do
         		unpaired_path=$(get_path "$2") 
         		shift
         	else
-        		>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The given unpaired read file does not exist or is empty."
+        		>&2 printf '%s\n' "[$(date "+%F %H:%M:%S")] ERROR: The given unpaired read file does not exist or is empty."
         		exit 1
         	fi
         	;;
@@ -126,7 +126,7 @@ while [ ! $# -eq 0 ]; do
             	outdir=$(get_path "$2")
             	shift
             else
-            	>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: You did not specify an output directory."
+            	>&2 printf '%s\n' "[$(date "+%F %H:%M:%S")] ERROR: You did not specify an output directory."
             	exit 1
             fi
             ;;
@@ -136,10 +136,10 @@ while [ ! $# -eq 0 ]; do
         		filterlength=1
         		shift
         	elif [[ "$2" == -* ]]; then
-        		>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: Give a minimum length for assembled scaffolds."
+        		>&2 printf '%s\n' "[$(date "+%F %H:%M:%S")] ERROR: Give a minimum length for assembled scaffolds."
         		exit 1
         	else
-        		>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The given minimum length is not an integer."
+        		>&2 printf '%s\n' "[$(date "+%F %H:%M:%S")] ERROR: The given minimum length is not an integer."
         		exit 1
         	fi
         	;;
@@ -149,7 +149,7 @@ while [ ! $# -eq 0 ]; do
             	diamond_path=$(get_path "$2")
             	shift
             else
-            	>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The provided diamond database does not exist."
+            	>&2 printf '%s\n' "[$(date "+%F %H:%M:%S")] ERROR: The provided diamond database does not exist."
             	exit 1
             fi
         	;;
@@ -174,11 +174,11 @@ while [ ! $# -eq 0 ]; do
         			diamond_sensitivity=''
         			shift
         		else
-        			>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: Unrecognized option for diamond sensitivity (options: default, fast, mid, more, very or ultra)."
+        			>&2 printf '%s\n' "[$(date "+%F %H:%M:%S")] ERROR: Unrecognized option for diamond sensitivity (options: default, fast, mid, more, very or ultra)."
         			exit 1
         		fi
         	else
-        		>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: --diamond-sensitivity requires an option (options: default, fast, mid, more, very or ultra)."
+        		>&2 printf '%s\n' "[$(date "+%F %H:%M:%S")] ERROR: --diamond-sensitivity requires an option (options: default, fast, mid, more, very or ultra)."
         		exit 1
             fi
             ;;
@@ -188,9 +188,9 @@ while [ ! $# -eq 0 ]; do
         		shift
         	else
         		if [[ "$2" = -* ]]; then
-        			>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] WARNING: No specified threads given, continuing with 4 threads."
+        			>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] WARNING: No specified threads given, continuing with 4 threads."
         		else
-        			>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] WARNING: Given threads not an integer, continuing with 4 threads."
+        			>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] WARNING: Given threads not an integer, continuing with 4 threads."
         			shift
         		fi
         	fi
@@ -200,7 +200,7 @@ while [ ! $# -eq 0 ]; do
             exit
             ;;
         *)
-            >&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: unrecognized option $1."
+            >&2 printf '%s\n' "[$(date "+%F %H:%M:%S")] ERROR: unrecognized option $1."
             usage
             exit 1
             ;;
@@ -213,7 +213,7 @@ commands='seqkit samtools ktClassifyBLAST bwa-mem2 diamond'
 for i in $commands; do
 	command -v $i &> /dev/null
 	if [[ ! $? -eq 0 ]]; then
-    printf '%s\n' "[$(date "+%F %H:%M")] ERROR: "$i" could not be found, please install "$i" in PATH or activate your conda environment."
+    printf '%s\n' "[$(date "+%F %H:%M:%S")] ERROR: "$i" could not be found, please install "$i" in PATH or activate your conda environment."
     exit 1
 	fi
 done
@@ -223,36 +223,36 @@ done
 if [[ -s "$read1_path" ]]; then
 	seqkit head "$read1_path" | seqkit stats | grep 'FASTQ' > /dev/null 2>&1
 	if [[ ! $? -eq 0 ]]; then
-		>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: The provided file "$read1_path" is not a FASTQ file."
+		>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] ERROR: The provided file "$read1_path" is not a FASTQ file."
 		exit 1
 	fi
 else
-	>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: The provided path "$read1_path" does not lead to a file."
+	>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] ERROR: The provided path "$read1_path" does not lead to a file."
 fi
 
 if [[ -s "$read2_path" ]]; then
 	seqkit head "$read2_path" | seqkit stats | grep 'FASTQ' > /dev/null 2>&1
 	if [[ ! $? -eq 0 ]]; then
-		>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: The provided file "$read2_path" is not a FASTQ file."
+		>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] ERROR: The provided file "$read2_path" is not a FASTQ file."
 		exit 1
 	fi
 else
-	>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: The provided path "$read2_path" does not lead to a file."
+	>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] ERROR: The provided path "$read2_path" does not lead to a file."
 fi
 
 ### Check if given diamond database is valid 
 if [[ $diamond -eq 1 ]]; then
 	dbinfo=$(diamond dbinfo -p "$threads" --db "$diamond_path" --quiet | grep 'version' | grep -o -E [0-9]+) > /dev/null 2>&1
 	if [[ ! $? -eq 0 ]]; then
-		>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: The provided file is not a diamond database."
+		>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] ERROR: The provided file is not a diamond database."
 		exit 1
 	elif [[ $dbinfo -le 1 ]]; then
 		>&2 printf '\n%s' "[ERROR]: This database was made with an older version of diamond and is not compatible."
-		>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: Please remake your diamond database with a version of Diamond 2.0 or higher."
+		>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] ERROR: Please remake your diamond database with a version of Diamond 2.0 or higher."
 		exit 1
 	fi
 else
-	>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: No diamond database given."
+	>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] ERROR: No diamond database given."
 	exit 1
 fi
 
@@ -266,18 +266,18 @@ sample="${fasta_name%%.*}"
 
 #Test if there is a common prefix
 #if [[ -z "$sample" ]]; then
-#      >&2 printf '\n%s\n' "[$(date "+%F %H:%M")] WARNING: No common prefix found between reads, continuing with generic sample name but you might want to check if forward and reverse reads are from the same sample."
+#      >&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] WARNING: No common prefix found between reads, continuing with generic sample name but you might want to check if forward and reverse reads are from the same sample."
 #      sample="sample"
 #fi
 
 ##### START ANNOTATION PIPELINE #####
-printf '\n%s\n' "[$(date "+%F %H:%M")] INFO: Starting ViPER annotation script!"
+printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: Starting ViPER annotation script!"
 mkdir -p "$outdir"
 cd "$outdir"
 
 
 if [[ $filterlength -eq 1 ]]; then
-	printf '\n%s\n' "[$(date "+%F %H:%M")] INFO: Filtering sequences larger than "$minlength"bp."
+	printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: Filtering sequences larger than "$minlength"bp."
 	seqkit seq -m "$minlength" -j "$threads" "$fasta" > "$sample"_"$minlength".fa
 	seqkit sort --by-length --reverse -o "$sample"_"$minlength".fa "$sample"_"$minlength".fa
 	fasta="$sample"_"$minlength".fa
@@ -286,12 +286,12 @@ fi
 	
 ### Diamond taxonomical annotation
 if [[ $diamond -eq 1 ]]; then
-	printf '\n%s\n' "[$(date "+%F %H:%M")] INFO: Running Diamond!"
+	printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: Running Diamond!"
 	diamond blastx --db "$diamond_path" -q "$fasta" -a "$sample" -p "$threads" $diamond_sensitivity -c 1 -b 5 --tmpdir /dev/shm --verbose
 	diamond view -a "$sample" -o "$sample".m8 -p "$threads"
 	
 	if [[ ! $? -eq 0 ]]; then
-		>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: Something went wrong with Diamond."
+		>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] ERROR: Something went wrong with Diamond."
 		exit 1 
 	fi
 fi
@@ -299,7 +299,7 @@ fi
 
 if [[ $diamond -eq 1 ]]; then
 ### Relative abundances by mapping 
-	printf '\n%s\n' "[$(date "+%F %H:%M")] INFO: Counting abundances for Krona."
+	printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: Counting abundances for Krona."
 
 	bwa-mem2 index "$fasta"
 	bwa-mem2 mem "$fasta" "$read1_path" "$read2_path" -t "$threads" | samtools view -Su - | samtools sort - -o "$sample".R.sort.bam
@@ -311,7 +311,7 @@ if [[ $diamond -eq 1 ]]; then
 	samtools idxstats "$sample".bam | cut -f1,3 > "$sample".magnitudes
 
 ### Krona visualization
-	printf '\n%s\n' "[$(date "+%F %H:%M")] INFO: Making Krona chart."
+	printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: Making Krona chart."
 	ktImportBLAST -o "$sample".html "$sample".m8,"$sample" "$sample".m8:"$sample".magnitudes,"$sample".magn
 
 	#ktClassifyBLAST "$outdir"/DIAMOND/"$sample".m8 -o KRONA/"$sample".tab
@@ -319,7 +319,7 @@ if [[ $diamond -eq 1 ]]; then
 fi
 
 if [[ $? -eq 0 ]]; then
-	printf '\n%s\n' "[$(date "+%F %H:%M")] INFO: viper-classify finished successfully! "
+	printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: viper-classify finished successfully! "
 else
-	>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: viper-classify finished abnormally."
+	>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] ERROR: viper-classify finished abnormally."
 fi
