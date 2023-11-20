@@ -18,7 +18,7 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-from clustering import viper_utilities as vu
+from viper_clustering import viper_utilities as vu
 
 # from genomad.modules import annotate, find_proviruses
 
@@ -66,7 +66,6 @@ def parse_arguments():
     parser.add_argument(
         "--checkv-db",
         dest="checkv_db",
-        required=True,
         type=str,
         metavar="PATH",
         help="CheckV database.",
@@ -74,7 +73,6 @@ def parse_arguments():
     parser.add_argument(
         "--genomad-db",
         dest="genomad_db",
-        required=True,
         type=str,
         metavar="PATH",
         help="geNomad database.",
@@ -608,52 +606,63 @@ def main():
     # Make tmp file for CheckV and geNomad outputs
     tmpdir = tempfile.mkdtemp(dir=output_dir)
 
-    # Run CheckV
-    checkv_dict = {
-        "fasta": fasta,
-        "tmpdir": tmpdir,
-        "checkv_db": args["checkv_db"],
-        "threads": threads,
-    }
-    run_checkv(**checkv_dict)
+    if args["checkv_db"] is not None & args["genomad_db"] is not None:
+        # Run CheckV
+        checkv_dict = {
+            "fasta": fasta,
+            "tmpdir": tmpdir,
+            "checkv_db": args["checkv_db"],
+            "threads": threads,
+        }
+        run_checkv(**checkv_dict)
 
-    # Run genomad
-    genomad_dict = {
-        "fasta": fasta,
-        "tmpdir": tmpdir,
-        "genomad_db": args["genomad_db"],
-        "threads": threads,
-        "sens_marker": args["sens_marker"],
-        "eval_marker": args["eval_marker"],
-        "splits": args["splits"],
-        "ct": args["ct"],
-        "mt": args["mt"],
-        "mti": args["mti"],
-        "mte": args["mte"],
-        "mid": args["mid"],
-        "mtd": args["mtd"],
-        "sens_integrase": args["sens_integrase"],
-        "eval_integrase": args["eval_integrase"],
-    }
+        # Run genomad
+        genomad_dict = {
+            "fasta": fasta,
+            "tmpdir": tmpdir,
+            "genomad_db": args["genomad_db"],
+            "threads": threads,
+            "sens_marker": args["sens_marker"],
+            "eval_marker": args["eval_marker"],
+            "splits": args["splits"],
+            "ct": args["ct"],
+            "mt": args["mt"],
+            "mti": args["mti"],
+            "mte": args["mte"],
+            "mid": args["mid"],
+            "mtd": args["mtd"],
+            "sens_integrase": args["sens_integrase"],
+            "eval_integrase": args["eval_integrase"],
+        }
 
-    run_genomad(**genomad_dict)
+        run_genomad(**genomad_dict)
 
-    # Make fastas with sequences to cluster and sequences to reinclude in a later clustering stage (across your study)
-    exclude_sequences_for_clustering(
-        fasta, output, output_name, tmpdir, minlength, keep_bed, debug
-    )
+        # Make fastas with sequences to cluster and sequences to reinclude in a later clustering stage (across your study)
+        exclude_sequences_for_clustering(
+            fasta, output, output_name, tmpdir, minlength, keep_bed, debug
+        )
 
-    logger.newline()
+        logger.newline()
 
-    # Cluster remaining sequences
-    vu.clustering(
-        os.path.join(tmpdir, output_name + "_to_cluster.fasta"),
-        output + "_clustered",
-        threads,
-        args["pid"],
-        args["cov"],
-        write_clusters=True,
-    )
+        # Cluster remaining sequences
+        vu.clustering(
+            os.path.join(tmpdir, output_name + "_to_cluster.fasta"),
+            output + "_clustered",
+            threads,
+            args["pid"],
+            args["cov"],
+            write_clusters=True,
+        )
+    else:
+        logger.info(f"Only clustering, no provirus identification.")
+        vu.clustering(
+            fasta,
+            output + "_clustered",
+            threads,
+            args["pid"],
+            args["cov"],
+            write_clusters=True,
+        )
 
     if not debug:
         shutil.rmtree(tmpdir)
