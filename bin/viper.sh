@@ -54,7 +54,8 @@ OPTIONAL:
    -x | --crop			Crops reads with Trimmomatic CROP to this final length. First 19 bases of each read are removed by default with HEADCROP. (default:'')
    -p | --primer-file		Path to the primer file in fasta format with sequences that have to be trimmed by Trimmomatic, or a built-in option by Trimmomatic. 
    				(default: \$CONDA_PREFIX/share/trimmomatic/adapters/NexteraPE-PE.fa)
-   --skip-trimming		Continue with given reads and do not trim the reads for quality and adapters with Trimmomatic. Useful when you already have trimmed your reads beforehand with other software for example.
+   --skip-trimming		Continue with given reads and do not trim the reads for quality and adapters with Trimmomatic. 
+   				Useful when you already have trimmed your reads beforehand with other software for example.
 
  Contamination removal:
    -c | --contaminome		Path to a bowtie2 indexed contaminome.
@@ -65,19 +66,28 @@ OPTIONAL:
    -k | --spades-k-mer		List of k-mer sizes for SPAdes (must be odd and less than 128). (default: 21,33,55,77)
    --triple-assembly		Will perform three denovo assemblies with metaspades on the full reads, a 10% and 1% subset of the reads.
    				All assembled contigs will be concatenated and clustered together to remove redundancy (see also --cluster-cover/identity).
-   --cluster-cover		% of the shortest sequence that should be covered during clustering. (default: 85)
-   --cluster-identity		% of ANI for clustering contigs. (default: 95)
    --memory-limit		Memory (in GB) to be reserved for SPAdes assembly. (default: autodetected by SPAdes)
    --only-assembler		Runs only the assembler of metaspades, useful when the error correction gets stuck. (Caution: assembly without error correction does not yield the same results as normal assembly)
 
+ Clustering:
+   --cluster-cover		% of the shortest sequence that should be covered during clustering. (default: 85)
+   --cluster-identity		% of ANI for clustering contigs. (default: 95)
+   --identify-proviruses	Identifies proviruses with genomad and performs contig integrity checks with CheckV. 
+   				Proviruses are split into host and viral sequences, and contigs with problems identified by CheckV are separated before clustering.
+				To reinclude these sequences you can run the separate script viper_cluster_study.py with the sequences from all your samples.
+				See https://github.com/Matthijnssenslab/ViPER for more explanation.
+   --checkv-db			Path to CheckV database. Required when --identify-proviruses is specified.
+   --genomad-db			Path to genomad database. Required when --identify-proviruses is specified.
+
  Classification:
-   -d | --diamond-path		Path to diamond database. If not given, Diamond and KronaTools will be skipped.
+   -d | --diamond-db		Path to diamond database. If not given, Diamond and KronaTools will be skipped.
    -s | --sensitivity		Can be 'default', 'fast', 'mid', 'more', 'very' and 'ultra' (default corresponds to --sensitive setting of Diamond).
    
 GENERAL:
-   -h | --help    		Show this message and exit.
+   -h | --help    		Show this message.
    -o | --outdir		Path where results will be stored and read files will be copied to (default: current directory).
-   -n | --name			Prefix to the output files, default is to use the common prefix of the read files or the date + timestamp, if no common prefix is found. Special characters are not allowed.
+   -n | --name			Prefix to the output files, default is to use the common prefix of the read files or the date + timestamp, if no common prefix is found. 
+   				Special characters are not allowed.
    -t | --threads		Number of threads to use. (default: 4)
    --bb-threads			Set the number of threads for BBMap tools (clumpify.sh, reformat.sh). (default: number of threads given to --threads)
 				Can be set to one if viper.sh fails on these steps with 'Exception in thread' error.
@@ -271,7 +281,7 @@ while [ ! $# -eq 0 ]; do
         		exit 1
         	fi
         	;;
-        -d | --diamond-path)
+        -d | --diamond-db)
         	if [[ -s "$2" ]]; then
         		diamond=1
             	diamond_path=$(get_path "$2")
@@ -356,6 +366,27 @@ while [ ! $# -eq 0 ]; do
         			exit 1
         		fi
         	fi
+        	;;
+		--identify-proviruses)
+			identify_proviruses=1
+			;;
+		--checkv-db)
+		    if [[ -s "$2" ]]; then
+            	checkv_db=$(get_path "$2")
+            	shift
+            else
+            	>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The provided CheckV database does not exist."
+            	exit 1
+            fi
+			;;
+		--genomad-db)
+			if [[ -s "$2" ]]; then
+            	genomad_db=$(get_path "$2")
+            	shift
+            else
+            	>&2 printf '%s\n' "[$(date "+%F %H:%M")] ERROR: The provided genomad database does not exist."
+            	exit 1
+            fi
         	;;
         -t | --threads)
         	if [[ "$2" =~ ^[0-9]+$ ]]; then
@@ -862,22 +893,14 @@ if [[ $triple -eq 1 ]]; then
 	printf '\n%s\n' "[$(date "+%F %H:%M")] INFO: Clustering contigs on "$cluster_identity"% identity over "$cluster_cover"% of the length."
 	#Cluster_genomes.pl -f "$sample"_"$minlength"-unclustered.contigs.fasta -c "$cluster_cover" -i "$cluster_identity" -t "$threads"
 	mkdir clustering
-	makeblastdb -in "$sample"_"$minlength"-unclustered.contigs.fasta -dbtype nucl -out clustering/"$sample"_"$minlength"
-	if [[ ! $? -eq 0 ]]; then
-		>&2 printf '\n%s\n' "[$(date "+%F %H:%M")] ERROR: Failed to make blastdb for clustering."
-		exit 1
-	fi
-	blastn -query "$sample"_"$minlength"-unclustered.contigs.fasta -db clustering/"$sample"_"$minlength" -outfmt '6 std qlen slen' -max_target_seqs 10000 -perc_identity "$blastn_pid" -out clustering/"$sample"_"$minlength".tsv -num_threads "$threads"
-	anicalc.py -i clustering/"$sample"_"$minlength".tsv -o clustering/"$sample"_"$minlength"_ani.tsv
-	if [[ $? -eq 0 ]]; then
-		aniclust.py --fna "$sample"_"$minlength"-unclustered.contigs.fasta --ani clustering/"$sample"_"$minlength"_ani.tsv --out "$sample"_"$minlength"_clusters.tsv --min_ani "$cluster_identity" --min_qcov 0 --min_tcov "$cluster_cover"
-		cut -f1 "$sample"_"$minlength"_clusters.tsv > "$sample"_cluster_representatives.txt
-		seqkit grep -j "$threads" -f "$sample"_cluster_representatives.txt -n -o "$sample"_"$minlength".contigs.fasta "$sample"_"$minlength"-unclustered.contigs.fasta
-		seqkit sort --by-length --reverse -o "$sample"_"$minlength".contigs.fasta "$sample"_"$minlength".contigs.fasta
+	cd clustering
+
+	if [[ $identify_proviruses -eq 1 ]]; then
+		viper-per-sample-cluster.py -i ../"$sample"_"$minlength"-unclustered.contigs.fasta -o "$sample"_"$minlength" -t $threads --checkv-db "$checkv_db" \
+									--genomad-db "$genomad_db" --min-identity $cluster_identity --min-coverage $cluster_cover
 	else
-		printf '\n%s\n' "[$(date "+%F %H:%M")] WARNING: Failed to calculate ANI for clustering: continuing with all contigs larger than "$minlength"bp."
-				warning=$((warning+1))
-                cp "$sample"_"$minlength"-unclustered.contigs.fasta "$sample"_"$minlength".contigs.fasta
+		viper-per-sample-cluster.py -i ../"$sample"_"$minlength"-unclustered.contigs.fasta -o "$sample"_"$minlength" -t $threads \
+									--min-identity $cluster_identity --min-coverage $cluster_cover
 	fi
 else
 	cp ASSEMBLY/"$sample".contigs.fasta CONTIGS/
