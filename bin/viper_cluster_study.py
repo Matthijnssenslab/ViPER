@@ -10,7 +10,7 @@ import pandas as pd
 from Bio import SeqIO
 from Bio.Blast.Applications import NcbiblastnCommandline, NcbimakeblastdbCommandline
 
-from clustering import viper_utilities as vu
+from viper_clustering import viper_utilities as vu
 
 
 def parse_arguments():
