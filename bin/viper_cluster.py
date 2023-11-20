@@ -10,7 +10,7 @@ import textwrap
 from pathlib import Path
 
 import checkv
-import genomad  # TODO: check if this is necessary when modules are loaded separately
+import genomad
 import pandas as pd
 import pybedtools
 import pysam
@@ -19,9 +19,6 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
 from viper_clustering import viper_utilities as vu
-
-# from genomad.modules import annotate, find_proviruses
-
 
 logger = vu.get_logger()
 
@@ -468,7 +465,6 @@ def run_genomad(
         evalue=eval_integrase,
     )
 
-
 def exclude_sequences_for_clustering(
     fasta, output, output_name, tmpdir, minlength, keep_bed, debug
 ):
@@ -591,7 +587,7 @@ def exclude_sequences_for_clustering(
 def main():
     # Parse script arguments
     args = parse_arguments()
-    fasta = Path(args["fasta"])
+    fasta = args["fasta"]
     minlength = args["length"]
     keep_bed = args["keep_bed"]
     debug = args["debug"]
@@ -649,7 +645,7 @@ def main():
         # Cluster remaining sequences
         vu.clustering(
             os.path.join(tmpdir, output_name + "_to_cluster.fasta"),
-            output + "_clustered",
+            output,
             threads,
             args["pid"],
             args["cov"],
