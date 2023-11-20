@@ -590,7 +590,7 @@ def exclude_sequences_for_clustering(
 def main():
     # Parse script arguments
     args = parse_arguments()
-    fasta = args["fasta"]
+    fasta = Path(args["fasta"])
     minlength = args["length"]
     keep_bed = args["keep_bed"]
     debug = args["debug"]
@@ -606,21 +606,22 @@ def main():
     # Make tmp file for CheckV and geNomad outputs
     tmpdir = tempfile.mkdtemp(dir=output_dir)
 
-    if args["checkv_db"] is not None & args["genomad_db"] is not None:
+    if args["checkv_db"] is not None and args["genomad_db"] is not None:
         # Run CheckV
         checkv_dict = {
             "fasta": fasta,
             "tmpdir": tmpdir,
-            "checkv_db": args["checkv_db"],
+            "checkv_db": Path(args["checkv_db"]),
             "threads": threads,
         }
+        
         run_checkv(**checkv_dict)
 
         # Run genomad
         genomad_dict = {
             "fasta": fasta,
             "tmpdir": tmpdir,
-            "genomad_db": args["genomad_db"],
+            "genomad_db": Path(args["genomad_db"]),
             "threads": threads,
             "sens_marker": args["sens_marker"],
             "eval_marker": args["eval_marker"],
@@ -657,7 +658,7 @@ def main():
         logger.info(f"Only clustering, no provirus identification.")
         vu.clustering(
             fasta,
-            output + "_clustered",
+            output,
             threads,
             args["pid"],
             args["cov"],

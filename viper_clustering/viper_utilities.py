@@ -341,7 +341,7 @@ def clustering(
 
     logger.info(f"Writing clusters.")
     if write_clusters:
-        with open(output + ".tsv", "w") as out:
+        with open(output + "_clusters.tsv", "w") as out:
             for seq_id, mem_ids in aniclust_dict.items():
                 out.write(seq_id + "\t" + ",".join(mem_ids) + "\n")
 
