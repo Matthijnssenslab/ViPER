@@ -46,22 +46,6 @@ def parse_arguments():
         help="Fasta file.",
     )
     parser.add_argument(
-        "--checkv-db",
-        dest="checkv_db",
-        required=True,
-        type=str,
-        metavar="PATH",
-        help="CheckV database.",
-    )
-    parser.add_argument(
-        "--genomad-db",
-        dest="genomad_db",
-        required=True,
-        type=str,
-        metavar="PATH",
-        help="geNomad database.",
-    )
-    parser.add_argument(
         "-o",
         "--output",
         dest="output",
@@ -78,6 +62,22 @@ def parse_arguments():
         metavar="INT",
         help="Number of threads to use. (default: %(default)s)",
         default=1,
+    )
+    parser.add_argument(
+        "--checkv-db",
+        dest="checkv_db",
+        required=True,
+        type=str,
+        metavar="PATH",
+        help="CheckV database.",
+    )
+    parser.add_argument(
+        "--genomad-db",
+        dest="genomad_db",
+        required=True,
+        type=str,
+        metavar="PATH",
+        help="geNomad database.",
     )
     parser.add_argument(
         "-l",
