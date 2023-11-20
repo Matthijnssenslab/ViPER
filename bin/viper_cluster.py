@@ -55,6 +55,22 @@ def parse_arguments():
         help="Output name for files.",
     )
     parser.add_argument(
+        "--min-identity",
+        dest="pid",
+        type=int,
+        metavar="INT",
+        help="Minimum average nucleotide identity (ANI) for sequences to be clustered. (default: %(default)s).",
+        default=95,  # change from 95 to 99 to prevent over-clustering during per-sample clustering
+    )
+    parser.add_argument(
+        "--min-coverage",
+        dest="cov",
+        type=int,
+        metavar="INT",
+        help="Minimum coverage %% of the shortest sequence that should be covered before clustering. (default: %(default)s).",
+        default=85,  # change from 85 to 99 to prevent over-clustering during per-sample clustering
+    )
+    parser.add_argument(
         "-t",
         "--threads",
         dest="threads",
@@ -174,22 +190,7 @@ def parse_arguments():
         help="Maximum accepted E-value in the MMseqs2 integrase search (default: %(default)s)",
         default=0.001,
     )
-    parser.add_argument(
-        "--min-identity",
-        dest="pid",
-        type=int,
-        metavar="INT",
-        help="Minimum average nucleotide identity (ANI) for sequences to be clustered. (default: %(default)s). Caution: Possibly decrease if large dataset (default: %(default)s)",
-        default=99,  # change from 95 to 99 to prevent over-clustering during per-sample clustering
-    )
-    parser.add_argument(
-        "--min-coverage",
-        dest="cov",
-        type=int,
-        metavar="INT",
-        help="Minimum coverage %% of the shortest sequence that should be covered before clustering. (default: %(default)s). Caution: Possibly decrease if large dataset (default: %(default)s)",
-        default=99,  # change from 85 to 99 to prevent over-clustering during per-sample clustering
-    )
+
     parser.add_argument(
         "--keep-bed",
         dest="keep_bed",
