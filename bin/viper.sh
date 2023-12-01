@@ -18,7 +18,6 @@ diamond_sensitivity="--sensitive"
 minlength=500
 cluster_cover=85
 cluster_identity=95
-blastn_pid=90
 crop=''
 spades_memory=''
 only_assembler=''
@@ -355,7 +354,6 @@ while [ ! $# -eq 0 ]; do
         --cluster-identity)
         	if [[ "$2" =~ ^[0-9]+$ ]]; then
         		cluster_identity=$2
-        		blastn_pid=$(($2-5))
         		shift
         	else
         		if [[ "$2" = -* ]]; then
