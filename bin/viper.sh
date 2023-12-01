@@ -89,7 +89,7 @@ GENERAL:
    				Special characters are not allowed.
    -t | --threads		Number of threads to use. (default: 4)
    --bb-threads			Set the number of threads for BBMap tools (clumpify.sh, reformat.sh). (default: number of threads given to --threads)
-				Can be set to one if viper.sh fails on these steps with 'Exception in thread' error.
+				Can be set to 1 if viper.sh fails on these steps with 'Exception in thread' error.
    --keep-reads			Do not move the read files to the output directory, but keep them in place.
 
 EOF
