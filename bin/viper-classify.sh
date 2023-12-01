@@ -287,8 +287,7 @@ fi
 ### Diamond taxonomical annotation
 if [[ $diamond -eq 1 ]]; then
 	printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: Running Diamond!"
-	diamond blastx --db "$diamond_path" -q "$fasta" -a "$sample" -p "$threads" $diamond_sensitivity -c 1 -b 5 --tmpdir /dev/shm --verbose
-	diamond view -a "$sample" -o "$sample".m8 -p "$threads"
+	diamond blastx --db "$diamond_path" -q "$fasta" -o "$sample".m8 -p "$threads" $diamond_sensitivity -c 1 -b 5 --tmpdir /dev/shm
 	
 	if [[ ! $? -eq 0 ]]; then
 		>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] ERROR: Something went wrong with Diamond."
