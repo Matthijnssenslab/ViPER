@@ -392,10 +392,10 @@ while [ ! $# -eq 0 ]; do
         		shift
         	else
         		if [[ "$2" = -* ]]; then
-        			>&2 printf '%s\n' "[$(date "+%F %H:%M")] WARNING: No specified threads given, continuing with 4 threads."
+        			>&2 printf '%s\n' "[$(date "+%F %H:%M:%S")] WARNING: No specified threads given, continuing with 4 threads."
 					warning=$((warning+1))
         		else
-        			>&2 printf '%s\n' "[$(date "+%F %H:%M")] WARNING: Given threads not an integer, continuing with 4 threads."
+        			>&2 printf '%s\n' "[$(date "+%F %H:%M:%S")] WARNING: Given threads not an integer, continuing with 4 threads."
 					warning=$((warning+1))
         			shift
         		fi
@@ -408,11 +408,11 @@ while [ ! $# -eq 0 ]; do
         	else
         		if [[ "$2" = -* ]]; then
 					bbthreads=1
-        			>&2 printf '%s\n' "[$(date "+%F %H:%M")] WARNING: No specified threads given, continuing with 1 thread for BBsuite tools."
+        			>&2 printf '%s\n' "[$(date "+%F %H:%M:%S")] WARNING: No specified threads given, continuing with 1 thread for BBsuite tools."
 					warning=$((warning+1))
         		else
 					bbthreads=1
-        			>&2 printf '%s\n' "[$(date "+%F %H:%M")] WARNING: Given threads not an integer, continuing with 1 thread for BBsuite tools."
+        			>&2 printf '%s\n' "[$(date "+%F %H:%M:%S")] WARNING: Given threads not an integer, continuing with 1 thread for BBsuite tools."
 					warning=$((warning+1))
         			shift
         		fi
