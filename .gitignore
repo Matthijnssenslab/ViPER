@@ -4,9 +4,15 @@ build/
 #Mac stuff:
 .DS_Store
 */.DS_Store
+
 #Notebook temps/
 .ipynb_checkpoints
 */.ipynb_checkpoints/*.ipynb
+
+#pip packaging
+*.egg-info/
+build/
+
 #Large files
 */*.fasta*
 */*.fastq*

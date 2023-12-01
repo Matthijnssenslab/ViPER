@@ -46,6 +46,7 @@ git clone https://github.com/Matthijnssenslab/ViPER.git
 cd ViPER
 conda env create -f viper.yml
 conda activate viper
+pip install .
 
 #Install ViPER scripts in `bin` of the new conda environment:
 cd bin
