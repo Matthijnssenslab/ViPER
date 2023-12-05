@@ -28,6 +28,7 @@ read2_given=0
 unpaired=0
 sample=''
 warning=0
+intermediary=1
 
 ##### FUNCTIONS #####
 #Help function
@@ -91,6 +92,7 @@ GENERAL:
    --bb-threads			Set the number of threads for BBMap tools (clumpify.sh, reformat.sh). (default: number of threads given to --threads)
 				Can be set to 1 if viper.sh fails on these steps with 'Exception in thread' error.
    --keep-reads			Do not move the read files to the output directory, but keep them in place.
+   --keep-intermediary	Do not remove the intermediary files from the SPAdes assembly, and BAM/fasta indices.
 
 EOF
 }
@@ -429,6 +431,9 @@ while [ ! $# -eq 0 ]; do
         	;;
         --keep-reads)
         	move=0
+        	;;
+		--keep-intermediary)
+			intermediary=0
         	;;
         -h | --help)
             usage
@@ -995,4 +1000,30 @@ elif [[ $warning -gt 0 ]]; then
 	printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: ViPER finished with $warning warning(s)."
 else
 	printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: ViPER finished successfully!"
+fi
+
+if [[ $intermediary -eq 1]]; then
+	cd "$outdir"
+	## Remove indices from mapping
+	rm CONTIGS/*.fasta.*
+	rm CONTIGS/*.bam.bai
+	
+	## Remove intermediary SPAdes files
+	rm -r ASSEMBLY/ASSEMBLY*/K*
+	rm -r ASSEMBLY/ASSEMBLY*/misc
+	rm -r ASSEMBLY/ASSEMBLY*/pipeline_state
+	rm -r ASSEMBLY/ASSEMBLY*/tmp
+	rm ASSEMBLY/ASSEMBLY*/assembly_graph.fastg
+	rm ASSEMBLY/ASSEMBLY*/contigs.paths
+	rm ASSEMBLY/ASSEMBLY*/dataset.info
+	rm ASSEMBLY/ASSEMBLY*/first_pe_contigs.fasta
+	rm ASSEMBLY/ASSEMBLY*/input_dataset.yaml
+	rm ASSEMBLY/ASSEMBLY*/params.txt
+	rm ASSEMBLY/ASSEMBLY*/run_spades.sh
+	rm ASSEMBLY/ASSEMBLY*/run_spades.yaml
+	rm ASSEMBLY/ASSEMBLY*/scaffolds.paths
+	rm ASSEMBLY/ASSEMBLY*/spades.log
+	rm ASSEMBLY/ASSEMBLY*/warnings.log
+	rm -r ASSEMBLY/ASSEMBLY*/corrected
+	rm ASSEMBLY/ASSEMBLY*/*.gfa
 fi
