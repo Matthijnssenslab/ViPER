@@ -129,6 +129,47 @@ check_fasta() {
 seqkit stat "$1" | grep 'FASTA' &> /dev/null
 }
 
+#Remove reads by mapping to contaminome or host genome
+map_removal(){
+	#Paired
+	bowtie2 --very-sensitive -p "$threads" -x $1 \
+	-1 "$final_read1" -2 "$final_read2" -S mapunmap_pair.sam
+	if [[ ! $? -eq 0 ]]; then
+		>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] ERROR: Something went wrong during the $2 removal of the paired reads."
+		exit 1 
+	fi
+	samtools view -bS mapunmap_pair.sam -@ "$threads" | samtools view -@ "$threads" -b -f12 -F256 - | samtools sort -n - -o PEunmapped.sorted.bam -@ "$threads"
+	samtools fastq PEunmapped.sorted.bam -1 "$3".R1.fastq -2 "$3".R2.fastq
+	rm mapunmap_pair.sam
+	rm PEunmapped.sorted.bam
+	pigz -9 "$3".R1.fastq
+	pigz -9 "$3".R2.fastq
+	mv "$3".R1.fastq.gz "$sample"."$3".R1.fastq.gz
+	mv "$3".R2.fastq.gz "$sample"."$3".R2.fastq.gz
+	
+	#Store names in variables
+	final_read1=$(get_path "$sample"."$3".R1.fastq.gz)
+	final_read2=$(get_path "$sample"."$3".R2.fastq.gz)
+
+	if [[ $unpaired -eq 1 ]]; then
+		# Unpaired
+		bowtie2 --very-sensitive -p "$threads" -x $1 -U "$final_unpaired" -S mapunmap_unpair.sam
+		if [[ ! $? -eq 0 ]]; then
+			>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] ERROR: Something went wrong during the $2 removal of the unpaired reads."
+			exit 1 
+		fi
+		samtools view -bS mapunmap_unpair.sam -@ "$threads" | samtools view -@ "$threads" -b -f4 -F256 - | samtools sort -n - -o UPunmapped.sorted.bam -@ "$threads"
+		samtools fastq UPunmapped.sorted.bam > "$3".unpaired.fastq
+		rm mapunmap_unpair.sam
+		rm UPunmapped.sorted.bam 
+		pigz -9 "$3".unpaired.fastq
+		mv "$3".unpaired.fastq.gz "$sample"."$3".unpaired.fastq.gz
+		
+		#Store names in variables
+		final_unpaired=$(get_path "$sample"."$3".unpaired.fastq.gz)
+	fi
+}
+
 ##### CHECKS #####
 
 #Check if all dependencies are installed in PATH
@@ -540,21 +581,6 @@ if [[ $contaminome_removal -eq 1 ]]; then
 	fi
 fi
 
-
-### Check if given diamond database is valid 
-if [[ $diamond -eq 1 ]]; then
-	dbinfo=$(diamond dbinfo -p "$threads" --db "$diamond_path" --quiet | grep 'version' | grep -o -E [0-9]+) > /dev/null 2>&1
-	if [[ ! $? -eq 0 ]]; then
-		>&2 printf '%s\n' "[$(date "+%F %H:%M:%S")] ERROR: The provided file is not a diamond database."
-		exit 1
-	elif [[ $dbinfo -le 1 ]]; then
-		>&2 printf '%s\n' "[$(date "+%F %H:%M:%S")] ERROR: This database was made with an older version of diamond and is not compatible."
-		>&2 printf '%s\n' "[$(date "+%F %H:%M:%S")] ERROR: Please remake your diamond database with a version of Diamond 2.0 or higher."
-		exit 1
-	fi
-fi
-
-
 ### Check if host removal is specified and if there is a valid indexed genome provided
 
 if [[ $host_removal -eq 1 ]]; then
@@ -571,6 +597,20 @@ if [[ $host_removal -eq 1 ]]; then
 		else 
 			printf '%s\n' "[$(date "+%F %H:%M:%S")] INFO: Removing reads that map to $host_genome."
 		fi
+	fi
+fi
+
+
+### Check if given diamond database is valid 
+if [[ $diamond -eq 1 ]]; then
+	dbinfo=$(diamond dbinfo -p "$threads" --db "$diamond_path" --quiet | grep 'version' | grep -o -E [0-9]+) > /dev/null 2>&1
+	if [[ ! $? -eq 0 ]]; then
+		>&2 printf '%s\n' "[$(date "+%F %H:%M:%S")] ERROR: The provided file is not a diamond database."
+		exit 1
+	elif [[ $dbinfo -le 1 ]]; then
+		>&2 printf '%s\n' "[$(date "+%F %H:%M:%S")] ERROR: This database was made with an older version of diamond and is not compatible."
+		>&2 printf '%s\n' "[$(date "+%F %H:%M:%S")] ERROR: Please remake your diamond database with a version of Diamond 2.0 or higher."
+		exit 1
 	fi
 fi
 
@@ -680,43 +720,7 @@ fi
 
 if [[ $contaminome_removal -eq 1 ]]; then
 	printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: Removing contaminome."
-	# Paired
-	bowtie2 --very-sensitive -p "$threads" -x "$contaminome" \
-	-1 "$final_read1" -2 "$final_read2" -S mapunmap_pair.sam
-	if [[ ! $? -eq 0 ]]; then
-		>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] ERROR: Something went wrong during the contaminome removal of the paired reads."
-		exit 1 
-	fi
-	samtools view -bS mapunmap_pair.sam -@ "$threads" | samtools view -@ "$threads" -b -f12 -F256 - | samtools sort -n - -o PEunmapped.sorted.bam -@ "$threads"
-	samtools fastq PEunmapped.sorted.bam -1 NCout.R1.fastq -2 NCout.R2.fastq
-	rm mapunmap_pair.sam
-	rm PEunmapped.sorted.bam
-	pigz -9 NCout.R1.fastq
-	pigz -9 NCout.R2.fastq
-	mv NCout.R1.fastq.gz "$sample".NCout.R1.fastq.gz
-	mv NCout.R2.fastq.gz "$sample".NCout.R2.fastq.gz
-	
-	#Store names in variables
-	final_read1=$(get_path "$sample".NCout.R1.fastq.gz)
-	final_read2=$(get_path "$sample".NCout.R2.fastq.gz)
-
-	if [[ $unpaired -eq 1 ]]; then
-		# Unpaired
-		bowtie2 --very-sensitive -p "$threads" -x "$contaminome" -U "$final_unpaired" -S mapunmap_unpair.sam
-		if [[ ! $? -eq 0 ]]; then
-			>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] ERROR: Something went wrong during the contaminome removal of the unpaired reads."
-			exit 1 
-		fi
-		samtools view -bS mapunmap_unpair.sam -@ "$threads" | samtools view -@ "$threads" -b -f4 -F256 - | samtools sort -n - -o UPunmapped.sorted.bam -@ "$threads"
-		samtools fastq UPunmapped.sorted.bam > NCout.unpaired.fastq
-		rm mapunmap_unpair.sam
-		rm UPunmapped.sorted.bam 
-		pigz -9 NCout.unpaired.fastq
-		mv NCout.unpaired.fastq.gz "$sample".NCout.unpaired.fastq.gz
-		
-		#Store names in variables
-		final_unpaired=$(get_path "$sample".NCout.unpaired.fastq.gz)
-	fi
+	map_removal "$contaminome" "contaminome" "NCout"
 fi
 
 ##############################################################################################################################################################
@@ -725,42 +729,7 @@ fi
 
 if [[ $host_removal -eq 1 ]]; then
 	printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: Removing host genome."
-	# Paired
-	bowtie2 --very-sensitive -p "$threads" -x "$host_genome" -1 "$final_read1" -2 "$final_read2" -S mapunmap_pair.sam
-	if [[ ! $? -eq 0 ]]; then
-		>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] ERROR: Something went wrong during the host genome removal of the paired reads."
-		exit 1 
-	fi
-	samtools view -bS mapunmap_pair.sam -@ "$threads" | samtools view -@ "$threads" -b -f12 -F256 - | samtools sort -n - -o PEunmapped.sorted.bam -@ "$threads"
-	samtools fastq PEunmapped.sorted.bam -1 Hostout.R1.fastq -2 Hostout.R2.fastq -@ "$threads"
-	rm mapunmap_pair.sam
-	rm PEunmapped.sorted.bam
-	pigz -9 Hostout.R1.fastq
-	pigz -9 Hostout.R2.fastq
-	mv Hostout.R1.fastq.gz "$sample".Hostout.R1.fastq.gz
-	mv Hostout.R2.fastq.gz "$sample".Hostout.R2.fastq.gz
-	
-	#Store names in variables
-	final_read1=$(get_path "$sample".Hostout.R1.fastq.gz)
-	final_read2=$(get_path "$sample".Hostout.R2.fastq.gz)
-
-	if [[ $unpaired -eq 1 ]]; then
-		# Unpaired
-		bowtie2 --very-sensitive -p "$threads" -x "$host_genome" -U "$final_unpaired" -S mapunmap_unpair.sam
-		if [[ ! $? -eq 0 ]]; then
-			>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] ERROR: Something went wrong during the host genome removal of the unpaired reads."
-			exit 1 
-		fi
-		samtools view -bS mapunmap_unpair.sam -@ "$threads" | samtools view -@ "$threads" -b -f4 -F256 - | samtools sort -n - -o UPunmapped.sorted.bam -@ "$threads"
-		samtools fastq UPunmapped.sorted.bam > Hostout.unpaired.fastq -@ "$threads"
-		rm mapunmap_unpair.sam
-		rm UPunmapped.sorted.bam
-		pigz -9 Hostout.unpaired.fastq
-		mv Hostout.unpaired.fastq.gz "$sample".Hostout.unpaired.fastq.gz
-		
-		#Store names in variables
-		final_unpaired=$(get_path "$sample".Hostout.unpaired.fastq.gz)
-	fi
+	map_removal "$host_genome" "host genome" "Hostout"
 fi
 
 ##############################################################################################################################################################
