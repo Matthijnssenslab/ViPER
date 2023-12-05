@@ -1002,12 +1002,12 @@ else
 	printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: ViPER finished successfully!"
 fi
 
-if [[ $intermediary -eq 1]]; then
+if [[ $intermediary -eq 1 ]]; then
 	cd "$outdir"
 	## Remove indices from mapping
 	rm CONTIGS/*.fasta.*
 	rm CONTIGS/*.bam.bai
-	
+
 	## Remove intermediary SPAdes files
 	rm -r ASSEMBLY/ASSEMBLY*/K*
 	rm -r ASSEMBLY/ASSEMBLY*/misc
