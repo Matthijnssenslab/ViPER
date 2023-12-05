@@ -125,15 +125,6 @@ check_error() {
 }
 
 #Check fasta file
-#check_fasta() {
-#perl -ne '
-#    $id = />.+/;
-#    die "Empty $.\n" if $id && $p || $id && eof;
-#    $p = $id;
-#    die "Invalid char $1 ($.)\n" if !$id && /([^A-Za-z\n])/
-#    ' -- "$1"
-#    }
-
 check_fasta() {
 seqkit stat "$1" | grep 'FASTA' &> /dev/null
 }
