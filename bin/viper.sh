@@ -964,26 +964,28 @@ fi
 
 if [[ $intermediary -eq 1 ]]; then
 	cd "$outdir"
+
 	## Remove indices from mapping
-	rm CONTIGS/*.fasta.*
-	rm CONTIGS/*.bam.bai
+	rm -f CONTIGS/*.fasta.*
+	rm -f CONTIGS/*.bam.bai
 
 	## Remove intermediary SPAdes files
-	rm -r ASSEMBLY/ASSEMBLY*/K*
-	rm -r ASSEMBLY/ASSEMBLY*/misc
-	rm -r ASSEMBLY/ASSEMBLY*/pipeline_state
-	rm -r ASSEMBLY/ASSEMBLY*/tmp
-	rm ASSEMBLY/ASSEMBLY*/assembly_graph.fastg
-	rm ASSEMBLY/ASSEMBLY*/contigs.paths
-	rm ASSEMBLY/ASSEMBLY*/dataset.info
-	rm ASSEMBLY/ASSEMBLY*/first_pe_contigs.fasta
-	rm ASSEMBLY/ASSEMBLY*/input_dataset.yaml
-	rm ASSEMBLY/ASSEMBLY*/params.txt
-	rm ASSEMBLY/ASSEMBLY*/run_spades.sh
-	rm ASSEMBLY/ASSEMBLY*/run_spades.yaml
-	rm ASSEMBLY/ASSEMBLY*/scaffolds.paths
-	rm ASSEMBLY/ASSEMBLY*/spades.log
-	rm ASSEMBLY/ASSEMBLY*/warnings.log
+	rm -rf ASSEMBLY/ASSEMBLY*/K*
+	rm -rf ASSEMBLY/ASSEMBLY*/misc
+	rm -rf ASSEMBLY/ASSEMBLY*/pipeline_state
+	rm -rf ASSEMBLY/ASSEMBLY*/tmp
+	rm -f ASSEMBLY/ASSEMBLY*/assembly_graph.fastg
+	rm -f ASSEMBLY/ASSEMBLY*/contigs.paths
+	rm -f ASSEMBLY/ASSEMBLY*/dataset.info
+	rm -f ASSEMBLY/ASSEMBLY*/first_pe_contigs.fasta
+	rm -f ASSEMBLY/ASSEMBLY*/input_dataset.yaml
+	rm -f ASSEMBLY/ASSEMBLY*/params.txt
+	rm -f ASSEMBLY/ASSEMBLY*/run_spades.sh
+	rm -f ASSEMBLY/ASSEMBLY*/run_spades.yaml
+	rm -f ASSEMBLY/ASSEMBLY*/scaffolds.paths
+	rm -f ASSEMBLY/ASSEMBLY*/spades.log
+	rm -f ASSEMBLY/ASSEMBLY*/warnings.log
 	rm -r ASSEMBLY/ASSEMBLY*/corrected
-	rm ASSEMBLY/ASSEMBLY*/*.gfa
+	rm -f ASSEMBLY/ASSEMBLY*/*.gfa
+	rm -f ASSEMBLY/ASSEMBLY*/before_rr.fasta
 fi
