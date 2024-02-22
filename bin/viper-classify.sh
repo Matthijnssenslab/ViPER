@@ -287,7 +287,8 @@ fi
 ### Diamond taxonomical annotation
 if [[ $diamond -eq 1 ]]; then
 	printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: Running Diamond!"
-	diamond blastx --db "$diamond_path" --query "$outdir"/CONTIGS/"$contigs" --out "$sample".m8 --threads "$threads" $diamond_sensitivity --index-chunks 1 --block-size 5 --tmpdir /dev/shm
+	diamond blastx --db "$diamond_path" --query "$fasta" --out "$sample".m8 --threads "$threads" \
+		$diamond_sensitivity --index-chunks 1 --block-size 5 --unal 1 --tmpdir /dev/shm
 	
 	if [[ ! $? -eq 0 ]]; then
 		>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] ERROR: Something went wrong with Diamond."
@@ -311,14 +312,20 @@ if [[ $diamond -eq 1 ]]; then
 
 ### Krona visualization
 	printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: Making Krona chart."
-	ktImportBLAST -o "$sample".html "$sample".m8,"$sample" "$sample".m8:"$sample".magnitudes,"$sample".magn
 
-	#ktClassifyBLAST "$outdir"/DIAMOND/"$sample".m8 -o KRONA/"$sample".tab
-	#awk 'NR==FNR { a[$1]=$2; next} $1 in a {print $0,"\t"a[$1]}' "$outdir"/SCAFFOLDS/"$sample".magnitudes "$outdir"/KRONA/"$sample".tab > "$outdir"/KRONA/"$sample".magnitudes.tab
+	ktClassifyBLAST -o "$sample".krona "$sample".m8
+	grep '*' "$sample".m8 | cut -f1,2,3 >> "$sample".krona
+	ktImportTaxonomy -o "$sample".html "$sample".krona,"$sample" \
+		"$sample".krona:"$sample".magnitudes,"$sample".magn
+
+	#ktImportBLAST -o "$sample".html "$sample".m8,"$sample" "$sample".m8:"$sample".magnitudes,"$sample".magn
 fi
 
 if [[ $? -eq 0 ]]; then
 	printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: viper-classify finished successfully! "
+	rm "$fasta".*
+	rm "$sample".bam.bai
+	rm "$sample".krona
 else
 	>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] ERROR: viper-classify finished abnormally."
 fi

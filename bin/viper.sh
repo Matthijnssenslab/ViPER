@@ -911,7 +911,8 @@ if [[ $diamond -eq 1 ]]; then
 	mkdir -p DIAMOND
 	cd DIAMOND
 	printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: Running Diamond!"
-	diamond blastx --db "$diamond_path" --query "$outdir"/CONTIGS/"$contigs" --out "$sample".m8 --threads "$threads" $diamond_sensitivity --index-chunks 1 --block-size 5 --tmpdir /dev/shm
+	diamond blastx --db "$diamond_path" --query "$outdir"/CONTIGS/"$contigs" --out "$sample".m8 --threads "$threads" \
+		$diamond_sensitivity --index-chunks 1 --block-size 5 --unal 1 --tmpdir /dev/shm
 	
 	if [[ ! $? -eq 0 ]]; then
 		>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] ERROR: Something went wrong with Diamond."
@@ -944,10 +945,14 @@ if [[ $diamond -eq 1 ]]; then
 	cd "$outdir"
 	mkdir -p KRONA
 	printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: Making Krona chart."
-	ktImportBLAST -o KRONA/"$sample".html "$outdir"/DIAMOND/"$sample".m8,"$sample" "$outdir"/DIAMOND/"$sample".m8:"$outdir"/CONTIGS/"$sample".magnitudes,"$sample".magn
 
-	#ktClassifyBLAST "$outdir"/DIAMOND/"$sample".m8 -o KRONA/"$sample".tab
-	#awk 'NR==FNR { a[$1]=$2; next} $1 in a {print $0,"\t"a[$1]}' "$outdir"/CONTIGS/"$sample".magnitudes "$outdir"/KRONA/"$sample".tab > "$outdir"/KRONA/"$sample".magnitudes.tab
+	cd KRONA
+	ktClassifyBLAST -o "$sample".krona "$outdir"/DIAMOND/"$sample".m8
+	grep '*' "$sample".m8 | cut -f1,2,3 >> "$sample".krona
+	ktImportTaxonomy -o "$sample".html "$sample".krona,"$sample" \
+		"$sample".krona:"$outdir"/CONTIGS/"$sample".magnitudes,"$sample".magn
+
+	#ktImportBLAST -o KRONA/"$sample".html "$outdir"/DIAMOND/"$sample".m8,"$sample" "$outdir"/DIAMOND/"$sample".m8:"$outdir"/CONTIGS/"$sample".magnitudes,"$sample".magn
 elif [[ ! $quast -eq 0 ]]; then
 	retfunc 1
 else
@@ -974,6 +979,7 @@ if [[ $intermediary -eq 1 ]]; then
 	rm -rf ASSEMBLY/ASSEMBLY*/misc
 	rm -rf ASSEMBLY/ASSEMBLY*/pipeline_state
 	rm -rf ASSEMBLY/ASSEMBLY*/tmp
+	rm -rf ASSEMBLY/ASSEMBLY*/corrected
 	rm -f ASSEMBLY/ASSEMBLY*/assembly_graph.fastg
 	rm -f ASSEMBLY/ASSEMBLY*/contigs.paths
 	rm -f ASSEMBLY/ASSEMBLY*/dataset.info
@@ -985,7 +991,9 @@ if [[ $intermediary -eq 1 ]]; then
 	rm -f ASSEMBLY/ASSEMBLY*/scaffolds.paths
 	rm -f ASSEMBLY/ASSEMBLY*/spades.log
 	rm -f ASSEMBLY/ASSEMBLY*/warnings.log
-	rm -r ASSEMBLY/ASSEMBLY*/corrected
 	rm -f ASSEMBLY/ASSEMBLY*/*.gfa
 	rm -f ASSEMBLY/ASSEMBLY*/before_rr.fasta
+
+	## Remove intermediary Krona files
+	rm -f KRONA/"$sample".krona
 fi
