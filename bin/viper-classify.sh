@@ -315,7 +315,7 @@ if [[ $diamond -eq 1 ]]; then
 
 	ktClassifyBLAST -o "$sample".krona "$sample".m8
 	grep '*' "$sample".m8 | cut -f1,2,3 >> "$sample".krona
-	ktImportTaxonomy -o "$sample".html "$sample".krona,"$sample" \
+	ktImportTaxonomy -n "$sample" -o "$sample".html "$sample".krona,"$sample" \
 		"$sample".krona:"$sample".magnitudes,"$sample".magn
 
 	#ktImportBLAST -o "$sample".html "$sample".m8,"$sample" "$sample".m8:"$sample".magnitudes,"$sample".magn
