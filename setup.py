@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="viper_clustering",
-    version="0.2",
+    version="0.3",
     description="Package to cluster ViPER triple assembly output.",
     author="Lander De Coninck",
     author_email="lander.deconinck@kuleuven.be",
