@@ -948,7 +948,7 @@ if [[ $diamond -eq 1 ]]; then
 
 	cd KRONA
 	ktClassifyBLAST -o "$sample".krona "$outdir"/DIAMOND/"$sample".m8
-	grep '*' "$sample".m8 | cut -f1,2,3 >> "$sample".krona
+	grep '*' "$outdir"/DIAMOND/"$sample".m8 | cut -f1,2,3 >> "$sample".krona
 	ktImportTaxonomy -n "$sample" -o "$sample".html "$sample".krona,"$sample" \
 		"$sample".krona:"$outdir"/CONTIGS/"$sample".magnitudes,"$sample".magn
 
