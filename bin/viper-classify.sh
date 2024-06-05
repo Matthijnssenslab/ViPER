@@ -35,6 +35,7 @@ OPTIONAL:
 GENERAL:
    -o | --outdir		Output directory (default: current directory). 
    -t | --threads		Number of threads to use. (default: 4)
+   -n | --name			Prefix to name files. (default: use basename of fasta file)
    -h | --help    		Show this message and exit.
 
 EOF
@@ -195,6 +196,15 @@ while [ ! $# -eq 0 ]; do
         		fi
         	fi
         	;;
+		-n | --name)
+        	if [[ "$2" == *['!'@#\$%^\&*()+]* ]]; then
+        		>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] WARNING: Invalid provided prefix for files. Continuing with basename of fasta file."
+        		shift
+        	else
+        		sample="$2"
+        		shift
+        	fi
+        	;;
         -h | --help)
             usage
             exit
@@ -259,16 +269,13 @@ fi
 # Extract file names
 read1=$(get_name "$read1_path")
 read2=$(get_name "$read2_path")
-#sample=$(common_prefix "$read1" "$read2")
 
-fasta_name=$(basename -- "$fasta")
-sample="${fasta_name%%.*}"
-
-#Test if there is a common prefix
-#if [[ -z "$sample" ]]; then
-#      >&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] WARNING: No common prefix found between reads, continuing with generic sample name but you might want to check if forward and reverse reads are from the same sample."
-#      sample="sample"
-#fi
+#Test if a name was already provided with -n
+#Otherwise take the fasta basename
+if [[ -z "$sample" ]]; then
+	fasta_name=$(basename -- "$fasta")
+	sample="${fasta_name%%.*}"
+fi
 
 ##### START ANNOTATION PIPELINE #####
 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: Starting ViPER annotation script!"
