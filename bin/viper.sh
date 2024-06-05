@@ -92,7 +92,7 @@ GENERAL:
    --bb-threads			Set the number of threads for BBMap tools (clumpify.sh, reformat.sh). (default: number of threads given to --threads)
 				Can be set to 1 if viper.sh fails on these steps with 'Exception in thread' error.
    --keep-reads			Do not move the read files to the output directory, but keep them in place.
-   --keep-intermediary	Do not remove the intermediary files from the SPAdes assembly, and BAM/fasta indices.
+   --keep-intermediary		Do not remove the intermediary files from the SPAdes assembly, and BAM/fasta indices.
 
 EOF
 }
@@ -169,18 +169,6 @@ map_removal(){
 		final_unpaired=$(get_path "$sample"."$3".unpaired.fastq.gz)
 	fi
 }
-
-##### CHECKS #####
-
-#Check if all dependencies are installed in PATH
-commands='seqkit samtools ktClassifyBLAST metaspades.py trimmomatic pigz bwa-mem2 diamond python bowtie2 reformat.sh fastqc perl clumpify.sh quast.py blastn makeblastdb anicalc.py aniclust.py'
-for i in $commands; do
-	command -v $i &> /dev/null
-	if [[ ! $? -eq 0 ]]; then
-    	printf '%s\n' "[$(date "+%F %H:%M:%S")] ERROR: "$i" could not be found, please install "$i" in PATH or activate your conda environment."
-    	exit 1
-	fi
-done
 
 ##### OPTIONS #####
 
@@ -454,7 +442,7 @@ while [ ! $# -eq 0 ]; do
         	;;
         -n | --name)
         	if [[ "$2" == *['!'@#\$%^\&*()+]* ]]; then
-        		:
+        		>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] WARNING: Invalid provided prefix for files. Continuing with common prefix of fastq files."
         		shift
         	else
         		sample="$2"
@@ -479,6 +467,19 @@ while [ ! $# -eq 0 ]; do
     esac
     shift
 done
+
+##### CHECKS #####
+
+#Check if all dependencies are installed in PATH
+commands='seqkit samtools ktClassifyBLAST metaspades.py trimmomatic pigz bwa-mem2 diamond python bowtie2 reformat.sh fastqc perl clumpify.sh quast.py blastn makeblastdb anicalc.py aniclust.py'
+for i in $commands; do
+	command -v $i &> /dev/null
+	if [[ ! $? -eq 0 ]]; then
+    	printf '%s\n' "[$(date "+%F %H:%M:%S")] ERROR: "$i" could not be found, please install "$i" in PATH or activate your conda environment."
+    	exit 1
+	fi
+done
+
 
 #Set bbthreads
 if [[ -z "$bbthreads" ]]; then
