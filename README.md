@@ -148,7 +148,9 @@ There are two options for clustering the triple assembly:
     Path to genomad database. Required when --identify-proviruses is specified.
 
 ### Classification
-To make use of the classification features of `viper.sh`, you have to provide a DIAMOND database (made with DIAMOND v2+). In addition, you can also select the sensitivity for DIAMOND.
+The 'classification' feature of ViPER generates a Krona chart that's based on a diamond blastx alignment with a database that contains sequences with an accession number from NCBI. Krona will, based on the accessions of the best 25 hits, get the lowest common ancestor and display this in a pie chart.
+
+In our lab we currently use NCBI's nr database formatted for `diamond`. As the nr database is currently ~300GB, it is undesirable to provide it together with the ViPER scripts. To use the nr database, you will have to download it as a fasta file (see [here](https://ncbiinsights.ncbi.nlm.nih.gov/2024/01/25/blast-fasta-unavailable-on-ftp/) for info on the current best way to generate the complete nr fasta file), and format it to a diamond database with `diamond makedb` (be sure to use `diamond` version +2). Alternatively, if you're only interested in the viruses in your data, you can only download the virus sequences from the nr database, which will reduce the runtime and database size massively.
 
 `-d | --diamond-path`
     Path to Diamond database. If not given, Diamond and KronaTools will be skipped.
