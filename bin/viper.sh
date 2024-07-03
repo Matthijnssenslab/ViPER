@@ -119,8 +119,8 @@ printf '%s\n' "$1" "$2" | sed -e '1h;G;s,\(.*\).*\n\1.*,\1,;h;$!d' | sed -E -e '
 
 check_error() {
 	if [[ ! $? -eq 0 ]]; then
-    	>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] ERROR: ViPER finished abnormally. Exit code: $1"
-    	exit $1
+    	>&2 printf '\n%s' "[$(date "+%F %H:%M:%S")] ERROR: ViPER finished abnormally. $2"
+    	exit 1
 	fi
 }
 
@@ -794,7 +794,7 @@ if [[ $triple -eq 1 ]]; then
 		-t "$threads" -k "$spades_k_mer" -o ASSEMBLY1 $spades_memory $only_assembler
 	fi
 
-	check_error 2
+	check_error "Full metaSPAdes assembly failed."
 	
 	cd ASSEMBLY1
 	mv contigs.fasta "$sample".full.contigs.fasta
@@ -814,7 +814,7 @@ if [[ $triple -eq 1 ]]; then
 	metaspades.py -1 "$subset10_R1" -2 "$subset10_R2" \
 	-t "$threads" -k "$spades_k_mer" -o ASSEMBLY2 $spades_memory
 	
-	check_error 3
+	check_error "10% metaSPAdes assembly failed."
 
 	cd ASSEMBLY2
 	mv contigs.fasta $"$sample".10-percent.contigs.fasta
@@ -834,7 +834,7 @@ if [[ $triple -eq 1 ]]; then
 	metaspades.py -1 "$subset1_R1" -2 "$subset1_R2" \
 	-t "$threads" -k "$spades_k_mer" -o ASSEMBLY3 $spades_memory
 	
-	check_error 4
+	check_error "1% metaSPAdes assembly failed."
 	
 	cd ASSEMBLY3
 	mv contigs.fasta "$sample".1-percent.contigs.fasta
@@ -893,6 +893,8 @@ if [[ $triple -eq 1 ]]; then
 		viper_cluster.py -i "$sample"_"$minlength"-unclustered.contigs.fasta -o "$sample"_"$minlength" -t $threads \
 									--min-identity $cluster_identity --min-coverage $cluster_cover
 	fi
+
+	check_error "Clustering of triple assembly failed. Did you perhaps forget to install the viper_clustering module with pip?"
 
 	mv "$sample"_"$minlength".fasta "$sample"_"$minlength".contigs.fasta
 
@@ -969,7 +971,7 @@ else
 fi
 
 if [[ ! $? -eq 0 ]]; then
-	check_error 5
+	check_error
 elif [[ $warning -gt 0 ]]; then
 	printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: ViPER finished with $warning warning(s)."
 else
