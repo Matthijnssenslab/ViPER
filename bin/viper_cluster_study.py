@@ -4,6 +4,7 @@ import argparse
 import logging
 import os
 import shutil
+import sys
 from pathlib import Path
 
 import pandas as pd
@@ -33,7 +34,6 @@ def parse_arguments():
         "-r",
         "--reinclude-fasta",
         dest="reinclude_fasta",
-        required=True,
         type=str,
         metavar="PATH",
         help="Fasta file.",
@@ -91,8 +91,18 @@ def main():
 
     logger = vu.get_logger()
 
-    # CLuster sequences of all samples (without reinclude fasta)
-    clust_seqs = vu.clustering(cluster_fasta, output, threads, returnDict=True)
+    # Cluster sequences of all samples (without reinclude fasta)
+    clust_seqs = vu.clustering(
+        cluster_fasta, output, threads, returnDict=True, write_clusters=True
+    )
+
+    if not reinclude_fasta:
+        logger.info(
+            f"No fasta file with sequences to reinclude given. All sequences are clustered. Exiting..."
+        )
+        sys.exit(1)
+    else:
+        os.remove(output + "_clusters.tsv")
 
     logger.newline()
     logger.info(
@@ -239,7 +249,9 @@ def main():
     logger.info(
         f"Write file with clusters and their respective cluster representatives..."
     )
-    with open(output + "_clusters.tsv", "w") as out:
+    with open(
+        output + "_" + str(args["pid"]) + "-" + str(args["cov"]) + "_clusters.tsv", "w"
+    ) as out:
         for seq_id, mem_ids in clust_seqs.items():
             out.write(seq_id + "\t" + ",".join(mem_ids) + "\n")
 

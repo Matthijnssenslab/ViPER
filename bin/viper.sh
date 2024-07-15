@@ -18,7 +18,6 @@ diamond_sensitivity="--sensitive"
 minlength=500
 cluster_cover=85
 cluster_identity=95
-blastn_pid=90
 crop=''
 spades_memory=''
 only_assembler=''
@@ -29,6 +28,7 @@ read2_given=0
 unpaired=0
 sample=''
 warning=0
+intermediary=1
 
 ##### FUNCTIONS #####
 #Help function
@@ -90,8 +90,9 @@ GENERAL:
    				Special characters are not allowed.
    -t | --threads		Number of threads to use. (default: 4)
    --bb-threads			Set the number of threads for BBMap tools (clumpify.sh, reformat.sh). (default: number of threads given to --threads)
-				Can be set to one if viper.sh fails on these steps with 'Exception in thread' error.
+				Can be set to 1 if viper.sh fails on these steps with 'Exception in thread' error.
    --keep-reads			Do not move the read files to the output directory, but keep them in place.
+   --keep-intermediary		Do not remove the intermediary files from the SPAdes assembly, and BAM/fasta indices.
 
 EOF
 }
@@ -118,36 +119,56 @@ printf '%s\n' "$1" "$2" | sed -e '1h;G;s,\(.*\).*\n\1.*,\1,;h;$!d' | sed -E -e '
 
 check_error() {
 	if [[ ! $? -eq 0 ]]; then
-    	>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] ERROR: ViPER finished abnormally. Exit code: $1"
-    	exit $1
+    	>&2 printf '\n%s' "[$(date "+%F %H:%M:%S")] ERROR: ViPER finished abnormally. $2"
+    	exit 1
 	fi
 }
 
 #Check fasta file
-#check_fasta() {
-#perl -ne '
-#    $id = />.+/;
-#    die "Empty $.\n" if $id && $p || $id && eof;
-#    $p = $id;
-#    die "Invalid char $1 ($.)\n" if !$id && /([^A-Za-z\n])/
-#    ' -- "$1"
-#    }
-
 check_fasta() {
 seqkit stat "$1" | grep 'FASTA' &> /dev/null
 }
 
-##### CHECKS #####
-
-#Check if all dependencies are installed in PATH
-commands='seqkit samtools ktClassifyBLAST metaspades.py trimmomatic pigz bwa-mem2 diamond python bowtie2 reformat.sh fastqc perl clumpify.sh quast.py blastn makeblastdb anicalc.py aniclust.py'
-for i in $commands; do
-	command -v $i &> /dev/null
+#Remove reads by mapping to contaminome or host genome
+map_removal(){
+	#Paired
+	bowtie2 --very-sensitive -p "$threads" -x $1 \
+	-1 "$final_read1" -2 "$final_read2" -S mapunmap_pair.sam
 	if [[ ! $? -eq 0 ]]; then
-    	printf '%s\n' "[$(date "+%F %H:%M:%S")] ERROR: "$i" could not be found, please install "$i" in PATH or activate your conda environment."
-    	exit 1
+		>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] ERROR: Something went wrong during the $2 removal of the paired reads."
+		exit 1 
 	fi
-done
+	samtools view -bS mapunmap_pair.sam -@ "$threads" | samtools view -@ "$threads" -b -f12 -F256 - | samtools sort -n - -o PEunmapped.sorted.bam -@ "$threads"
+	samtools fastq PEunmapped.sorted.bam -1 "$3".R1.fastq -2 "$3".R2.fastq
+	rm mapunmap_pair.sam
+	rm PEunmapped.sorted.bam
+	pigz -9 "$3".R1.fastq
+	pigz -9 "$3".R2.fastq
+	mv "$3".R1.fastq.gz "$sample"."$3".R1.fastq.gz
+	mv "$3".R2.fastq.gz "$sample"."$3".R2.fastq.gz
+	
+	#Store names in variables
+	final_read1=$(get_path "$sample"."$3".R1.fastq.gz)
+	final_read2=$(get_path "$sample"."$3".R2.fastq.gz)
+
+	if [[ $unpaired -eq 1 ]]; then
+		# Unpaired
+		bowtie2 --very-sensitive -p "$threads" -x $1 -U "$final_unpaired" -S mapunmap_unpair.sam
+		if [[ ! $? -eq 0 ]]; then
+			>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] ERROR: Something went wrong during the $2 removal of the unpaired reads."
+			exit 1 
+		fi
+		samtools view -bS mapunmap_unpair.sam -@ "$threads" | samtools view -@ "$threads" -b -f4 -F256 - | samtools sort -n - -o UPunmapped.sorted.bam -@ "$threads"
+		samtools fastq UPunmapped.sorted.bam > "$3".unpaired.fastq
+		rm mapunmap_unpair.sam
+		rm UPunmapped.sorted.bam 
+		pigz -9 "$3".unpaired.fastq
+		mv "$3".unpaired.fastq.gz "$sample"."$3".unpaired.fastq.gz
+		
+		#Store names in variables
+		final_unpaired=$(get_path "$sample"."$3".unpaired.fastq.gz)
+	fi
+}
 
 ##### OPTIONS #####
 
@@ -355,7 +376,6 @@ while [ ! $# -eq 0 ]; do
         --cluster-identity)
         	if [[ "$2" =~ ^[0-9]+$ ]]; then
         		cluster_identity=$2
-        		blastn_pid=$(($2-5))
         		shift
         	else
         		if [[ "$2" = -* ]]; then
@@ -422,7 +442,7 @@ while [ ! $# -eq 0 ]; do
         	;;
         -n | --name)
         	if [[ "$2" == *['!'@#\$%^\&*()+]* ]]; then
-        		:
+        		>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] WARNING: Invalid provided prefix for files. Continuing with common prefix of fastq files."
         		shift
         	else
         		sample="$2"
@@ -431,6 +451,9 @@ while [ ! $# -eq 0 ]; do
         	;;
         --keep-reads)
         	move=0
+        	;;
+		--keep-intermediary)
+			intermediary=0
         	;;
         -h | --help)
             usage
@@ -444,6 +467,19 @@ while [ ! $# -eq 0 ]; do
     esac
     shift
 done
+
+##### CHECKS #####
+
+#Check if all dependencies are installed in PATH
+commands='seqkit samtools ktClassifyBLAST metaspades.py trimmomatic pigz bwa-mem2 diamond python bowtie2 reformat.sh fastqc perl clumpify.sh quast.py blastn makeblastdb anicalc.py aniclust.py'
+for i in $commands; do
+	command -v $i &> /dev/null
+	if [[ ! $? -eq 0 ]]; then
+    	printf '%s\n' "[$(date "+%F %H:%M:%S")] ERROR: "$i" could not be found, please install "$i" in PATH or activate your conda environment."
+    	exit 1
+	fi
+done
+
 
 #Set bbthreads
 if [[ -z "$bbthreads" ]]; then
@@ -546,21 +582,6 @@ if [[ $contaminome_removal -eq 1 ]]; then
 	fi
 fi
 
-
-### Check if given diamond database is valid 
-if [[ $diamond -eq 1 ]]; then
-	dbinfo=$(diamond dbinfo -p "$threads" --db "$diamond_path" --quiet | grep 'version' | grep -o -E [0-9]+) > /dev/null 2>&1
-	if [[ ! $? -eq 0 ]]; then
-		>&2 printf '%s\n' "[$(date "+%F %H:%M:%S")] ERROR: The provided file is not a diamond database."
-		exit 1
-	elif [[ $dbinfo -le 1 ]]; then
-		>&2 printf '%s\n' "[$(date "+%F %H:%M:%S")] ERROR: This database was made with an older version of diamond and is not compatible."
-		>&2 printf '%s\n' "[$(date "+%F %H:%M:%S")] ERROR: Please remake your diamond database with a version of Diamond 2.0 or higher."
-		exit 1
-	fi
-fi
-
-
 ### Check if host removal is specified and if there is a valid indexed genome provided
 
 if [[ $host_removal -eq 1 ]]; then
@@ -577,6 +598,20 @@ if [[ $host_removal -eq 1 ]]; then
 		else 
 			printf '%s\n' "[$(date "+%F %H:%M:%S")] INFO: Removing reads that map to $host_genome."
 		fi
+	fi
+fi
+
+
+### Check if given diamond database is valid 
+if [[ $diamond -eq 1 ]]; then
+	dbinfo=$(diamond dbinfo -p "$threads" --db "$diamond_path" --quiet | grep 'version' | grep -o -E [0-9]+) > /dev/null 2>&1
+	if [[ ! $? -eq 0 ]]; then
+		>&2 printf '%s\n' "[$(date "+%F %H:%M:%S")] ERROR: The provided file is not a diamond database."
+		exit 1
+	elif [[ $dbinfo -le 1 ]]; then
+		>&2 printf '%s\n' "[$(date "+%F %H:%M:%S")] ERROR: This database was made with an older version of diamond and is not compatible."
+		>&2 printf '%s\n' "[$(date "+%F %H:%M:%S")] ERROR: Please remake your diamond database with a version of Diamond 2.0 or higher."
+		exit 1
 	fi
 fi
 
@@ -631,10 +666,18 @@ if [[ $skip_trimming -eq 0 ]]; then
 
 ### Trimming
 
-	trimmomatic PE -threads "$threads" "$read1_path" "$read2_path" TRIMMED/"$sample".TRIM.R1.fastq.gz TRIMMED/"$sample".R1.unpaired.fastq.gz \
-	TRIMMED/"$sample".TRIM.R2.fastq.gz TRIMMED/"$sample".R2.unpaired.fastq.gz \
-	ILLUMINACLIP:"$trimmomatic_primer":2:30:7:1:true HEADCROP:19 LEADING:15 TRAILING:15 \
-	SLIDINGWINDOW:4:20 MINLEN:50 $crop
+	trimmomatic PE \
+		-threads "$threads" \
+		"$read1_path" "$read2_path" \
+		TRIMMED/"$sample".TRIM.R1.fastq.gz TRIMMED/"$sample".R1.unpaired.fastq.gz \
+		TRIMMED/"$sample".TRIM.R2.fastq.gz TRIMMED/"$sample".R2.unpaired.fastq.gz \
+		ILLUMINACLIP:"$trimmomatic_primer":2:30:7:1:true \
+		HEADCROP:19 \
+		LEADING:15 \
+		TRAILING:15 \
+		SLIDINGWINDOW:4:20 \
+		MINLEN:50 \
+		$crop
 
 	if [[ $? -eq 0 ]]; then
 		printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: Trimmomatic completed succesfully!"
@@ -686,43 +729,7 @@ fi
 
 if [[ $contaminome_removal -eq 1 ]]; then
 	printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: Removing contaminome."
-	# Paired
-	bowtie2 --very-sensitive -p "$threads" -x "$contaminome" \
-	-1 "$final_read1" -2 "$final_read2" -S mapunmap_pair.sam
-	if [[ ! $? -eq 0 ]]; then
-		>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] ERROR: Something went wrong during the contaminome removal of the paired reads."
-		exit 1 
-	fi
-	samtools view -bS mapunmap_pair.sam -@ "$threads" | samtools view -@ "$threads" -b -f12 -F256 - | samtools sort -n - -o PEunmapped.sorted.bam -@ "$threads"
-	samtools fastq PEunmapped.sorted.bam -1 NCout.R1.fastq -2 NCout.R2.fastq
-	rm mapunmap_pair.sam
-	rm PEunmapped.sorted.bam
-	pigz -9 NCout.R1.fastq
-	pigz -9 NCout.R2.fastq
-	mv NCout.R1.fastq.gz "$sample".NCout.R1.fastq.gz
-	mv NCout.R2.fastq.gz "$sample".NCout.R2.fastq.gz
-	
-	#Store names in variables
-	final_read1=$(get_path "$sample".NCout.R1.fastq.gz)
-	final_read2=$(get_path "$sample".NCout.R2.fastq.gz)
-
-	if [[ $unpaired -eq 1 ]]; then
-		# Unpaired
-		bowtie2 --very-sensitive -p "$threads" -x "$contaminome" -U "$final_unpaired" -S mapunmap_unpair.sam
-		if [[ ! $? -eq 0 ]]; then
-			>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] ERROR: Something went wrong during the contaminome removal of the unpaired reads."
-			exit 1 
-		fi
-		samtools view -bS mapunmap_unpair.sam -@ "$threads" | samtools view -@ "$threads" -b -f4 -F256 - | samtools sort -n - -o UPunmapped.sorted.bam -@ "$threads"
-		samtools fastq UPunmapped.sorted.bam > NCout.unpaired.fastq
-		rm mapunmap_unpair.sam
-		rm UPunmapped.sorted.bam 
-		pigz -9 NCout.unpaired.fastq
-		mv NCout.unpaired.fastq.gz "$sample".NCout.unpaired.fastq.gz
-		
-		#Store names in variables
-		final_unpaired=$(get_path "$sample".NCout.unpaired.fastq.gz)
-	fi
+	map_removal "$contaminome" "contaminome" "NCout"
 fi
 
 ##############################################################################################################################################################
@@ -731,42 +738,7 @@ fi
 
 if [[ $host_removal -eq 1 ]]; then
 	printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: Removing host genome."
-	# Paired
-	bowtie2 --very-sensitive -p "$threads" -x "$host_genome" -1 "$final_read1" -2 "$final_read2" -S mapunmap_pair.sam
-	if [[ ! $? -eq 0 ]]; then
-		>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] ERROR: Something went wrong during the host genome removal of the paired reads."
-		exit 1 
-	fi
-	samtools view -bS mapunmap_pair.sam -@ "$threads" | samtools view -@ "$threads" -b -f12 -F256 - | samtools sort -n - -o PEunmapped.sorted.bam -@ "$threads"
-	samtools fastq PEunmapped.sorted.bam -1 Hostout.R1.fastq -2 Hostout.R2.fastq -@ "$threads"
-	rm mapunmap_pair.sam
-	rm PEunmapped.sorted.bam
-	pigz -9 Hostout.R1.fastq
-	pigz -9 Hostout.R2.fastq
-	mv Hostout.R1.fastq.gz "$sample".Hostout.R1.fastq.gz
-	mv Hostout.R2.fastq.gz "$sample".Hostout.R2.fastq.gz
-	
-	#Store names in variables
-	final_read1=$(get_path "$sample".Hostout.R1.fastq.gz)
-	final_read2=$(get_path "$sample".Hostout.R2.fastq.gz)
-
-	if [[ $unpaired -eq 1 ]]; then
-		# Unpaired
-		bowtie2 --very-sensitive -p "$threads" -x "$host_genome" -U "$final_unpaired" -S mapunmap_unpair.sam
-		if [[ ! $? -eq 0 ]]; then
-			>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] ERROR: Something went wrong during the host genome removal of the unpaired reads."
-			exit 1 
-		fi
-		samtools view -bS mapunmap_unpair.sam -@ "$threads" | samtools view -@ "$threads" -b -f4 -F256 - | samtools sort -n - -o UPunmapped.sorted.bam -@ "$threads"
-		samtools fastq UPunmapped.sorted.bam > Hostout.unpaired.fastq -@ "$threads"
-		rm mapunmap_unpair.sam
-		rm UPunmapped.sorted.bam
-		pigz -9 Hostout.unpaired.fastq
-		mv Hostout.unpaired.fastq.gz "$sample".Hostout.unpaired.fastq.gz
-		
-		#Store names in variables
-		final_unpaired=$(get_path "$sample".Hostout.unpaired.fastq.gz)
-	fi
+	map_removal "$host_genome" "host genome" "Hostout"
 fi
 
 ##############################################################################################################################################################
@@ -822,7 +794,7 @@ if [[ $triple -eq 1 ]]; then
 		-t "$threads" -k "$spades_k_mer" -o ASSEMBLY1 $spades_memory $only_assembler
 	fi
 
-	check_error 2
+	check_error "Full metaSPAdes assembly failed."
 	
 	cd ASSEMBLY1
 	mv contigs.fasta "$sample".full.contigs.fasta
@@ -842,7 +814,7 @@ if [[ $triple -eq 1 ]]; then
 	metaspades.py -1 "$subset10_R1" -2 "$subset10_R2" \
 	-t "$threads" -k "$spades_k_mer" -o ASSEMBLY2 $spades_memory
 	
-	check_error 3
+	check_error "10% metaSPAdes assembly failed."
 
 	cd ASSEMBLY2
 	mv contigs.fasta $"$sample".10-percent.contigs.fasta
@@ -862,7 +834,7 @@ if [[ $triple -eq 1 ]]; then
 	metaspades.py -1 "$subset1_R1" -2 "$subset1_R2" \
 	-t "$threads" -k "$spades_k_mer" -o ASSEMBLY3 $spades_memory
 	
-	check_error 4
+	check_error "1% metaSPAdes assembly failed."
 	
 	cd ASSEMBLY3
 	mv contigs.fasta "$sample".1-percent.contigs.fasta
@@ -922,6 +894,8 @@ if [[ $triple -eq 1 ]]; then
 									--min-identity $cluster_identity --min-coverage $cluster_cover
 	fi
 
+	check_error "Clustering of triple assembly failed. Did you perhaps forget to install the viper_clustering module with pip?"
+
 	mv "$sample"_"$minlength".fasta "$sample"_"$minlength".contigs.fasta
 
 else
@@ -948,8 +922,8 @@ if [[ $diamond -eq 1 ]]; then
 	mkdir -p DIAMOND
 	cd DIAMOND
 	printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: Running Diamond!"
-	diamond blastx --db "$diamond_path" -q "$outdir"/CONTIGS/"$contigs" -a "$sample" -p "$threads" $diamond_sensitivity -c 1 -b 5 --tmpdir /dev/shm
-	diamond view -a "$sample" -o "$sample".m8 -p "$threads"
+	diamond blastx --db "$diamond_path" --query "$outdir"/CONTIGS/"$contigs" --out "$sample".m8 --threads "$threads" \
+		$diamond_sensitivity --index-chunks 1 --block-size 5 --unal 1 --tmpdir /dev/shm
 	
 	if [[ ! $? -eq 0 ]]; then
 		>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] ERROR: Something went wrong with Diamond."
@@ -982,10 +956,14 @@ if [[ $diamond -eq 1 ]]; then
 	cd "$outdir"
 	mkdir -p KRONA
 	printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: Making Krona chart."
-	ktImportBLAST -o KRONA/"$sample".html "$outdir"/DIAMOND/"$sample".m8,"$sample" "$outdir"/DIAMOND/"$sample".m8:"$outdir"/CONTIGS/"$sample".magnitudes,"$sample".magn
 
-	#ktClassifyBLAST "$outdir"/DIAMOND/"$sample".m8 -o KRONA/"$sample".tab
-	#awk 'NR==FNR { a[$1]=$2; next} $1 in a {print $0,"\t"a[$1]}' "$outdir"/CONTIGS/"$sample".magnitudes "$outdir"/KRONA/"$sample".tab > "$outdir"/KRONA/"$sample".magnitudes.tab
+	cd KRONA
+	ktClassifyBLAST -o "$sample".krona "$outdir"/DIAMOND/"$sample".m8
+	grep '*' "$outdir"/DIAMOND/"$sample".m8 | cut -f1,2,3 >> "$sample".krona
+	ktImportTaxonomy -n "$sample" -o "$sample".html "$sample".krona,"$sample" \
+		"$sample".krona:"$outdir"/CONTIGS/"$sample".magnitudes,"$sample".magn
+
+	#ktImportBLAST -o KRONA/"$sample".html "$outdir"/DIAMOND/"$sample".m8,"$sample" "$outdir"/DIAMOND/"$sample".m8:"$outdir"/CONTIGS/"$sample".magnitudes,"$sample".magn
 elif [[ ! $quast -eq 0 ]]; then
 	retfunc 1
 else
@@ -993,9 +971,40 @@ else
 fi
 
 if [[ ! $? -eq 0 ]]; then
-	check_error 5
+	check_error
 elif [[ $warning -gt 0 ]]; then
 	printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: ViPER finished with $warning warning(s)."
 else
 	printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: ViPER finished successfully!"
+fi
+
+if [[ $intermediary -eq 1 ]]; then
+	cd "$outdir"
+
+	## Remove indices from mapping
+	rm -f CONTIGS/*.fasta.*
+	rm -f CONTIGS/*.bam.bai
+
+	## Remove intermediary SPAdes files
+	rm -rf ASSEMBLY/ASSEMBLY*/K*
+	rm -rf ASSEMBLY/ASSEMBLY*/misc
+	rm -rf ASSEMBLY/ASSEMBLY*/pipeline_state
+	rm -rf ASSEMBLY/ASSEMBLY*/tmp
+	rm -rf ASSEMBLY/ASSEMBLY*/corrected
+	rm -f ASSEMBLY/ASSEMBLY*/assembly_graph.fastg
+	rm -f ASSEMBLY/ASSEMBLY*/contigs.paths
+	rm -f ASSEMBLY/ASSEMBLY*/dataset.info
+	rm -f ASSEMBLY/ASSEMBLY*/first_pe_contigs.fasta
+	rm -f ASSEMBLY/ASSEMBLY*/input_dataset.yaml
+	rm -f ASSEMBLY/ASSEMBLY*/params.txt
+	rm -f ASSEMBLY/ASSEMBLY*/run_spades.sh
+	rm -f ASSEMBLY/ASSEMBLY*/run_spades.yaml
+	rm -f ASSEMBLY/ASSEMBLY*/scaffolds.paths
+	rm -f ASSEMBLY/ASSEMBLY*/spades.log
+	rm -f ASSEMBLY/ASSEMBLY*/warnings.log
+	rm -f ASSEMBLY/ASSEMBLY*/*.gfa
+	rm -f ASSEMBLY/ASSEMBLY*/before_rr.fasta
+
+	## Remove intermediary Krona files
+	rm -f KRONA/"$sample".krona
 fi

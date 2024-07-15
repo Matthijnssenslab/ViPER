@@ -110,12 +110,6 @@ The resulting contigs have to be indexed by Bowtie2 and can subsequently be used
 `--triple-assembly`
     Will perform three *de novo* assemblies with metaspades on the full reads, a 10% and 1% subset of the reads. All assembled contigs will be concatenated and clustered together to remove redundancy (see also `--cluster-cover/identity`).
 
-`--cluster-cover`
-    % of the shortest sequence that should be covered during clustering. (default: 85)
-
-`--cluster-identity`
-    % of ANI for clustering contigs. (default: 95)
-
 `--memory-limit`
     Memory (in GB) to be reserved for SPAdes assembly. (default: 250)
 
@@ -123,13 +117,40 @@ The resulting contigs have to be indexed by Bowtie2 and can subsequently be used
     Runs only the assembler of metaspades, useful when the error correction gets stuck. (Caution: assembly without error correction does not yield the same results as normal assembly)
     
 #### Triple assembly
-To overcome the problem of viral genomes breaking into multiple pieces during assembly due to huge coverage (which makes the resulting De Bruijn graph too difficult to interpret by the assembler), a subset of 10 and 1% of the original reads may be applied by `--triple-assembly`. These subsetted reads are also assembled by metaSPAdes and resulting contigs of all three assemblies (from original reads, 10% and 1% subset) are subsequently clustered together to remove redundancy in the contig set. This way shorter contigs belonging to the same genome, but from a different assembly, will be removed and only the most complete contigs will be retained. Clustering is performed by a combination of [BLAST+](https://www.ncbi.nlm.nih.gov/books/NBK279690/), `anicalc.py` and `aniclust.py` which are distributed as part of the [CheckV](https://bitbucket.org/berkeleylab/checkv/src/master/) package.
+To overcome the problem of viral genomes breaking into multiple pieces during assembly due to huge coverage (which makes the resulting De Bruijn graph too difficult to interpret by the assembler), a subset of 10% and 1% of the original reads may be applied by `--triple-assembly`. These subsetted reads are also assembled by metaSPAdes and resulting contigs of all three assemblies (from original reads, 10% and 1% subset) are subsequently clustered together to remove redundancy in the contig set. This way shorter contigs belonging to the same genome, but from a different assembly, will be removed and only the most complete contigs will be retained. Clustering is performed by a combination of [BLAST+](https://www.ncbi.nlm.nih.gov/books/NBK279690/), `anicalc.py` and `aniclust.py` which are distributed as part of the [CheckV](https://bitbucket.org/berkeleylab/checkv/src/master/) package.
 ```code
-viper.sh -1 read1.fastq(.gz) -2 read2.fastq(.gz) -x 130 -p /path/to/fasta/with/primers/to/remove -d /path/to/diamond/database -s fast --triple-assembly
+viper.sh -1 read1.fastq(.gz) -2 read2.fastq(.gz) -p /path/to/fasta/with/primers/to/remove --triple-assembly
 ```
 
+#### Clustering the triple assembly
+There are two options for clustering the triple assembly:
+ 1. The default clustering will perform a UCLUST-like clustering using the MIUVIG recommended-parameters as distributed with the [CheckV](https://bitbucket.org/berkeleylab/checkv/src/master/) package.
+ 2. When you specify the `--identify-proviruses` option, the script will run [geNomad](https://portal.nersc.gov/genomad/) to identify proviruses and [CheckV](https://bitbucket.org/berkeleylab/checkv/src/master/) to identify potential chimera's. The provirus contigs are subsequently split into host and viral contigs. This means that if you have a 150,000nt contig `NODE_A1_length_150000_...` with a provirus integrated from position 70,000 to 110,000 in the contig, the contig will be split into three parts: `NODE_A1V_length_150000V40000_...` for the viral part of the contig, and `NODE_A1H_length_150000H69999_...` **and** `NODE_A1H_length_150000H39999_...` for the host parts. The `V` and `H` indicate if that part is viral or host respectively, while the number after the original contig length + `V`/`H` indicates the length of the new contig.
+ In addition, the contigs that were flagged by CheckV as potentially problematic are kept in a separate fasta file so they don't end up as cluster representatives (`_re-include.fasta`). They can be later on reincluded when you cluster the contigs of all your samples together with `viper_cluster_study.py`. If there is no other contig clustering with one of the problematic contigs, this contig will eventually also become a cluster representative.
+
+ The clustering script is also available as a standalone script `viper_cluster.py`, if you want to have more control on the geNomad parameters for the provirus identification.
+
+`--cluster-cover`
+    % of the shortest sequence that should be covered during clustering. (default: 85)
+
+`--cluster-identity`
+    % of ANI for clustering contigs. (default: 95)
+
+`--identify-proviruses`	
+    Automatically triggers --triple-assembly, identifies proviruses with genomad and performs contig integrity checks with CheckV. 
+   	Proviruses are split into host and viral sequences, and contigs with problems identified by CheckV are separated before clustering.
+	To reinclude these sequences you can run the separate script viper_cluster_study.py with the sequences from all your samples.
+
+`--checkv-db`			
+    Path to CheckV database. Required when --identify-proviruses is specified.
+
+`--genomad-db`			
+    Path to genomad database. Required when --identify-proviruses is specified.
+
 ### Classification
-To make use of the classification features of `viper.sh`, you have to provide a DIAMOND database (made with DIAMOND v2+). In addition, you can also select the sensitivity for DIAMOND.
+The 'classification' feature of ViPER generates a Krona chart that's based on a diamond blastx alignment with a database that contains sequences with an accession number from NCBI. Krona will, based on the accessions of the best 25 hits, get the lowest common ancestor and display this in a pie chart.
+
+In our lab we currently use NCBI's nr database formatted for `diamond`. As the nr database is currently ~300GB, it is undesirable to provide it together with the ViPER scripts. To use the nr database, you will have to download it as a fasta file (see [here](https://ncbiinsights.ncbi.nlm.nih.gov/2024/01/25/blast-fasta-unavailable-on-ftp/) for info on the current best way to generate the complete nr fasta file), and format it to a diamond database with `diamond makedb` (be sure to use `diamond` version +2). Alternatively, if you're only interested in the viruses in your data, you can only download the virus sequences from the nr database, which will reduce the runtime and database size massively.
 
 `-d | --diamond-path`
     Path to Diamond database. If not given, Diamond and KronaTools will be skipped.
@@ -149,6 +170,9 @@ To make use of the classification features of `viper.sh`, you have to provide a 
 	
 `--keep-reads`
 	Do not move the read files to the output directory, but keep them in place.
+
+`--keep-intermediary`
+	Do not remove the intermediary files from SPAdes (assembly graphs, corrected reads, etc.) and the BAM and fasta indices used for mapping.
 
 # Output
 ### `READ`
@@ -185,8 +209,6 @@ Possibly, other files in this directory belong to the mapping of the reads to th
     
 ### `DIAMOND`
 Contains standard DIAMOND output. 
-- <code><i>sample</i>.daa</code>
-    DIAMOND archive file
 - <code><i>sample</i>.m8</code>
     Tabular BLAST file with 12 preconfigured fields:<br> `qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore`
     

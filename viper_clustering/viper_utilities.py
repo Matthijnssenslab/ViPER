@@ -306,7 +306,7 @@ def clustering(
         db=os.path.join("blastdb_" + Path(output).name, Path(output).name + "_db"),
         outfmt="6 std qlen slen",
         max_target_seqs=10000,
-        perc_identity=90,
+        perc_identity=pid - 5,
         num_threads=threads,
         out=output + ".out",
     )
