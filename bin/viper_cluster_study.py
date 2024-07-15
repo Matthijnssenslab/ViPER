@@ -97,10 +97,16 @@ def main():
     )
 
     if not reinclude_fasta:
-        logger.info(
-            f"No fasta file with sequences to reinclude given. All sequences are clustered. Exiting..."
+        logger.info(f"No reinclude fasta given, clustering all sequences.")
+        vu.clustering(
+            fasta,
+            output,
+            threads,
+            args["pid"],
+            args["cov"],
+            write_clusters=True,
         )
-        sys.exit(1)
+        sys.exit(0)
     else:
         os.remove(output + "_clusters.tsv")
 
