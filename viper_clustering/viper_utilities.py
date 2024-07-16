@@ -369,7 +369,7 @@ def run_cmd(command):
 
 def clustering(fasta, output, threads, pid=0.95, cov=0.85):
     """Function to cluster fasta sequences based on a percentage identity and minimum coverage and write cluster representatives to a fasta file."""
-    logger.info(f"Clustering sequences:")
+    logger.info(f"Starting clustering process.")
 
     # Calculate values based on conditions
     pid_value = pid if pid <= 1 else pid / 100
@@ -389,6 +389,7 @@ def clustering(fasta, output, threads, pid=0.95, cov=0.85):
         "--min-ident",
         str(pid_value - 0.05),
     ]
+
     align = [
         "vclust.py",
         "align",
@@ -423,6 +424,9 @@ def clustering(fasta, output, threads, pid=0.95, cov=0.85):
         "--out-repr",
     ]
 
+    logger.info(f"Applying prefilter.")
     run_cmd(prefilter)
+    logger.info(f"Aligning sequences.")
     run_cmd(align)
+    logger.info(f"Clustering sequences.")
     run_cmd(cluster)
