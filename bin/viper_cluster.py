@@ -54,18 +54,18 @@ def parse_arguments():
     parser.add_argument(
         "--min-identity",
         dest="pid",
-        type=int,
-        metavar="INT",
-        help="Minimum average nucleotide identity (ANI) for sequences to be clustered. (default: %(default)s).",
-        default=95,  # change from 95 to 99 to prevent over-clustering during per-sample clustering
+        type=float,
+        metavar="FLOAT",
+        help="Minimum average nucleotide identity (ANI) for sequences to be clustered. [0-1] (default: %(default)s).",
+        default=0.95,  # change from 95 to 99 to prevent over-clustering during per-sample clustering
     )
     parser.add_argument(
         "--min-coverage",
         dest="cov",
-        type=int,
-        metavar="INT",
-        help="Minimum coverage %% of the shortest sequence that should be covered before clustering. (default: %(default)s).",
-        default=85,  # change from 85 to 99 to prevent over-clustering during per-sample clustering
+        type=float,
+        metavar="FLOAT",
+        help="Minimum coverage %% of the shortest sequence that should be covered before clustering. [0-1] (default: %(default)s).",
+        default=0.85,  # change from 85 to 99 to prevent over-clustering during per-sample clustering
     )
     parser.add_argument(
         "-t",
@@ -465,6 +465,7 @@ def run_genomad(
         evalue=eval_integrase,
     )
 
+
 def exclude_sequences_for_clustering(
     fasta, output, output_name, tmpdir, minlength, keep_bed, debug
 ):
@@ -611,7 +612,7 @@ def main():
             "checkv_db": Path(args["checkv_db"]),
             "threads": threads,
         }
-        
+
         run_checkv(**checkv_dict)
 
         # Run genomad
