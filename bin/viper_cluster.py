@@ -650,7 +650,6 @@ def main():
             threads,
             args["pid"],
             args["cov"],
-            write_clusters=True,
         )
     else:
         logger.info(f"Only clustering, no provirus identification.")
@@ -660,7 +659,6 @@ def main():
             threads,
             args["pid"],
             args["cov"],
-            write_clusters=True,
         )
 
     if not debug:
