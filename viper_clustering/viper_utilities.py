@@ -2,12 +2,12 @@ import gzip
 import logging
 import os
 import shutil
+import subprocess
 import types
 from pathlib import Path
 
 import pandas as pd
 from Bio import SeqIO
-from Bio.Blast.Applications import NcbiblastnCommandline, NcbimakeblastdbCommandline
 
 # def get_logger():
 #     logger = logging.getLogger(__name__)
@@ -288,71 +288,141 @@ def aniclust(
     return clust_to_seqs
 
 
-def clustering(
-    fasta, output, threads, pid=95, cov=85, returnDict=False, write_clusters=False
-):
+# def clustering(
+#    fasta, output, threads, pid=95, cov=85, returnDict=False, write_clusters=False
+# ):
+#    """Function to cluster fasta sequences based on a percentage identity and minimum coverage and write cluster representatives to a fasta file."""
+#    logger.info(f"Clustering sequences:")
+#    if os.path.exists("blastdb_" + Path(output).name):
+#        shutil.rmtree("blastdb_" + Path(output).name)
+#    os.mkdir("blastdb_" + Path(output).name)
+#    makedb = NcbimakeblastdbCommandline(
+#        dbtype="nucl",
+#        input_file=fasta,
+#        out=os.path.join("blastdb_" + Path(output).name, Path(output).name + "_db"),
+#    )
+#    blastn = NcbiblastnCommandline(
+#        query=fasta,
+#        db=os.path.join("blastdb_" + Path(output).name, Path(output).name + "_db"),
+#        outfmt="6 std qlen slen",
+#        max_target_seqs=10000,
+#        perc_identity=pid - 5,
+#        num_threads=threads,
+#        out=output + ".out",
+#    )
+#    makedb()
+#    logger.info(f"Running blastn...")
+#    blastn()#
+
+#    # if not os.path.isfile(output + ".out"):
+#    #    logger.info(
+#    #        f"No sequences to cluster, use your input {fasta} for downstream analysis."
+#    #    )
+#    #    os.remove(output + ".out")
+#    #    return None#
+
+#    anicalc_df = anicalc(output + ".out")#
+
+#    if anicalc_df is None:
+#        logger.info(
+#            f'No sequences to cluster, creating "clustered" fasta file without the sequences to reinclude.'
+#        )
+#        shutil.copyfile(fasta, output + ".fasta")
+#        shutil.rmtree("blastdb_" + Path(output).name)
+#        os.remove(output + ".out")
+#        return None#
+
+#    aniclust_dict = aniclust(
+#        fasta,
+#        anicalc_df,
+#        min_ani=pid,
+#        min_tcov=cov,
+#    )#
+
+#    logger.info(f"Writing clusters.")
+#    if write_clusters:
+#        with open(output + "_clusters.tsv", "w") as out:
+#            for seq_id, mem_ids in aniclust_dict.items():
+#                out.write(seq_id + "\t" + ",".join(mem_ids) + "\n")#
+
+#    logger.info(f"Writing cluster represtentatives' sequences to a fasta file.")
+#    with open(output + ".fasta", "w") as f:
+#        for seq in SeqIO.parse(fasta, "fasta"):
+#            if seq.id in aniclust_dict.keys():
+#                SeqIO.write(seq, f, "fasta")#
+
+#    shutil.rmtree("blastdb_" + Path(output).name)
+#    os.remove(output + ".out")#
+
+#    if returnDict:
+#        return aniclust_dict
+
+
+def run_cmd(command):
+    try:
+        # Running the command and allowing it to output directly to the screen
+        subprocess.run(command, check=True)
+    except subprocess.CalledProcessError as e:
+        subcommand = " ".join(command[:2])
+        print(f"{subcommand} failed with exit code {e.returncode}.")
+
+
+def clustering(fasta, output, threads, pid=0.95, cov=0.85):
     """Function to cluster fasta sequences based on a percentage identity and minimum coverage and write cluster representatives to a fasta file."""
     logger.info(f"Clustering sequences:")
-    if os.path.exists("blastdb_" + Path(output).name):
-        shutil.rmtree("blastdb_" + Path(output).name)
-    os.mkdir("blastdb_" + Path(output).name)
-    makedb = NcbimakeblastdbCommandline(
-        dbtype="nucl",
-        input_file=fasta,
-        out=os.path.join("blastdb_" + Path(output).name, Path(output).name + "_db"),
-    )
-    blastn = NcbiblastnCommandline(
-        query=fasta,
-        db=os.path.join("blastdb_" + Path(output).name, Path(output).name + "_db"),
-        outfmt="6 std qlen slen",
-        max_target_seqs=10000,
-        perc_identity=pid - 5,
-        num_threads=threads,
-        out=output + ".out",
-    )
-    makedb()
-    logger.info(f"Running blastn...")
-    blastn()
 
-    # if not os.path.isfile(output + ".out"):
-    #    logger.info(
-    #        f"No sequences to cluster, use your input {fasta} for downstream analysis."
-    #    )
-    #    os.remove(output + ".out")
-    #    return None
+    # Calculate values based on conditions
+    pid_value = pid if pid <= 1 else pid / 100
+    cov_value = cov if cov <= 1 else cov / 100
 
-    anicalc_df = anicalc(output + ".out")
-
-    if anicalc_df is None:
-        logger.info(
-            f'No sequences to cluster, creating "clustered" fasta file without the sequences to reinclude.'
-        )
-        shutil.copyfile(fasta, output + ".fasta")
-        shutil.rmtree("blastdb_" + Path(output).name)
-        os.remove(output + ".out")
-        return None
-
-    aniclust_dict = aniclust(
+    prefilter = [
+        "vclust.py",
+        "prefilter",
+        "-t",
+        threads,
+        "-i",
         fasta,
-        anicalc_df,
-        min_ani=pid,
-        min_tcov=cov,
-    )
+        "-o",
+        "fltr.txt",
+        "--min-kmers",
+        "30",
+        "--min-ident",
+        pid_value - 0.05,
+    ]
+    align = [
+        "vclust.py",
+        "align",
+        "-t",
+        threads,
+        "-i",
+        fasta,
+        "-o",
+        "ani.tsv",
+        "--filter",
+        "fltr.txt",
+        "--out-ani",
+        pid_value - 0.05,
+    ]
+    cluster = [
+        "vclust.py",
+        "cluster",
+        "-i",
+        "ani.tsv",
+        "-o",
+        output,
+        "--ids",
+        "ani.ids.tsv",
+        "--algorithm",
+        "cd-hit",
+        "--metric",
+        "ani",
+        "--ani",
+        pid_value,
+        "--cov",
+        cov_value,
+        "--out-repr",
+    ]
 
-    logger.info(f"Writing clusters.")
-    if write_clusters:
-        with open(output + "_clusters.tsv", "w") as out:
-            for seq_id, mem_ids in aniclust_dict.items():
-                out.write(seq_id + "\t" + ",".join(mem_ids) + "\n")
-
-    logger.info(f"Writing cluster represtentatives' sequences to a fasta file.")
-    with open(output + ".fasta", "w") as f:
-        for seq in SeqIO.parse(fasta, "fasta"):
-            if seq.id in aniclust_dict.keys():
-                SeqIO.write(seq, f, "fasta")
-
-    shutil.rmtree("blastdb_" + Path(output).name)
-    os.remove(output + ".out")
-
-    if returnDict:
-        return aniclust_dict
+    run_cmd(prefilter)
+    run_cmd(align)
+    run_cmd(cluster)
