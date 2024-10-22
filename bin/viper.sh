@@ -940,9 +940,14 @@ if [[ $diamond -eq 1 ]]; then
 	bwa-mem2 index "$contigs"
 	bwa-mem2 mem "$contigs" "$final_read1" "$final_read2" -t "$threads" | samtools view -Su - | samtools sort - -o "$sample".R.sort.bam
 
+	check_error "Mapping paired reads finished abnormally."
+
 	if [[ $unpaired -eq 1 ]]; then
 		bwa-mem2 mem "$contigs" "$final_unpaired" -t "$threads" | samtools view -Su - | samtools sort - -o "$sample".un.sort.bam
 		samtools merge -f "$sample".bam "$sample".R.sort.bam "$sample".un.sort.bam
+
+		check_error "Mapping unpaired reads finished abnormally."
+
 		rm "$sample".R.sort.bam
 		rm "$sample".un.sort.bam
 	else
