@@ -992,11 +992,7 @@ if [[ $intermediary -eq 1 ]]; then
 	rm -f CONTIGS/*.bam.bai
 
 	## Remove intermediary SPAdes files
-	# Define a path pattern to target both ASSEMBLY/ and ASSEMBLY/ASSEMBLY[123] directories
-	target_paths=("ASSEMBLY" "ASSEMBLY/ASSEMBLY[123]")
-	
-	# Loop through the path patterns and remove specified files and folders
-	for path in "${target_paths[@]}"; do
+	for path in ASSEMBLY ASSEMBLY/ASSEMBLY{1..3}; do
 	    rm -rf "$path"/K*
 	    rm -rf "$path"/misc
 	    rm -rf "$path"/pipeline_state
@@ -1016,7 +1012,6 @@ if [[ $intermediary -eq 1 ]]; then
 	    rm -f "$path"/*.gfa
 	    rm -f "$path"/before_rr.fasta
 	done
-
 
 	## Remove intermediary Krona files
 	rm -f KRONA/"$sample".krona
