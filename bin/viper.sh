@@ -956,7 +956,7 @@ if [[ $diamond -eq 1 ]]; then
 	fi
 	
 	samtools index "$sample".bam
-	samtools idxstats "$sample".bam | cut -llf1,3 > "$sample".magnitudes
+	samtools idxstats "$sample".bam | cut -f1,3 > "$sample".magnitudes
 
 ### Krona visualization
 	cd "$outdir"
@@ -992,24 +992,31 @@ if [[ $intermediary -eq 1 ]]; then
 	rm -f CONTIGS/*.bam.bai
 
 	## Remove intermediary SPAdes files
-	rm -rf ASSEMBLY/ASSEMBLY*/K*
-	rm -rf ASSEMBLY/ASSEMBLY*/misc
-	rm -rf ASSEMBLY/ASSEMBLY*/pipeline_state
-	rm -rf ASSEMBLY/ASSEMBLY*/tmp
-	rm -rf ASSEMBLY/ASSEMBLY*/corrected
-	rm -f ASSEMBLY/ASSEMBLY*/assembly_graph.fastg
-	rm -f ASSEMBLY/ASSEMBLY*/contigs.paths
-	rm -f ASSEMBLY/ASSEMBLY*/dataset.info
-	rm -f ASSEMBLY/ASSEMBLY*/first_pe_contigs.fasta
-	rm -f ASSEMBLY/ASSEMBLY*/input_dataset.yaml
-	rm -f ASSEMBLY/ASSEMBLY*/params.txt
-	rm -f ASSEMBLY/ASSEMBLY*/run_spades.sh
-	rm -f ASSEMBLY/ASSEMBLY*/run_spades.yaml
-	rm -f ASSEMBLY/ASSEMBLY*/scaffolds.paths
-	rm -f ASSEMBLY/ASSEMBLY*/spades.log
-	rm -f ASSEMBLY/ASSEMBLY*/warnings.log
-	rm -f ASSEMBLY/ASSEMBLY*/*.gfa
-	rm -f ASSEMBLY/ASSEMBLY*/before_rr.fasta
+	# Define a path pattern to target both ASSEMBLY/ and ASSEMBLY/ASSEMBLY[123] directories
+	target_paths=("ASSEMBLY" "ASSEMBLY/ASSEMBLY[123]")
+	
+	# Loop through the path patterns and remove specified files and folders
+	for path in "${target_paths[@]}"; do
+	    rm -rf "$path"/K*
+	    rm -rf "$path"/misc
+	    rm -rf "$path"/pipeline_state
+	    rm -rf "$path"/tmp
+	    rm -rf "$path"/corrected
+	    rm -f "$path"/assembly_graph.fastg
+	    rm -f "$path"/contigs.paths
+	    rm -f "$path"/dataset.info
+	    rm -f "$path"/first_pe_contigs.fasta
+	    rm -f "$path"/input_dataset.yaml
+	    rm -f "$path"/params.txt
+	    rm -f "$path"/run_spades.sh
+	    rm -f "$path"/run_spades.yaml
+	    rm -f "$path"/scaffolds.paths
+	    rm -f "$path"/spades.log
+	    rm -f "$path"/warnings.log
+	    rm -f "$path"/*.gfa
+	    rm -f "$path"/before_rr.fasta
+	done
+
 
 	## Remove intermediary Krona files
 	rm -f KRONA/"$sample".krona
