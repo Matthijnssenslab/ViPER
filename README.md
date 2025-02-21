@@ -202,8 +202,6 @@ The contigs files from all three assemblies are copied to a `triple-assembly` fo
     File with **clustered contigs** larger than the specified length.
 - <code><i>sample_length</i>_clusters.tsv</code>
     File showing which contigs cluster together. First column is the representative, second column is a comma-separated list of scaffold names that cluster with the representative.
-- <code><i>sample</i>_cluster_representatives.txt</code>
-    File with only cluster representative names.
     
 Possibly, other files in this directory belong to the mapping of the reads to the contigs, e.g. the index files of bwa-mem2, the BAM and its index file and <code><i>sample</i>.magnitudes</code> which contains the read count for each scaffold (or cluster representative). 
     
