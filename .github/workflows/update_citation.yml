@@ -1,0 +1,41 @@
+name: Update CITATION.cff on Release
+
+on:
+  release:
+    types:
+      - released
+
+jobs:
+  update-citation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Extract release version
+        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+
+      - name: Update CITATION.cff version
+        run: |
+          python -c "
+          import yaml
+          file = 'CITATION.cff'
+          with open(file, 'r') as f:
+              data = yaml.safe_load(f)
+          data['version'] = '${{ env.RELEASE_VERSION }}'
+          with open(file, 'w') as f:
+              yaml.dump(data, f, default_flow_style=False, sort_keys=False)
+          "
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add CITATION.cff
+          git commit -m "Update CITATION.cff to version ${{ env.RELEASE_VERSION }}" || exit 0
+          git push
