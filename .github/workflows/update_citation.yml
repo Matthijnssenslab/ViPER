@@ -13,17 +13,18 @@ jobs:
       contents: write  # Required for pushing changes
 
     steps:
+      - name: Authenticate with GitHub App
+        uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          token: ${{ steps.app-token.outputs.token }}
           fetch-depth: 0  # Fetch all branches
-
-      - name: Authenticate with GitHub App
-        id: app-auth
-        uses: tibdex/github-app-token@v1
-        with:
-          app_id: ${{ secrets.GH_APP_ID }}
-          private_key: ${{ secrets.GH_APP_PRIVATE_KEY }}
 
       - name: Determine default branch
         id: default_branch
@@ -57,7 +58,7 @@ jobs:
 
       - name: Commit and push changes using GitHub App Token
         env:
-          GH_APP_TOKEN: ${{ steps.app-auth.outputs.token }}
+          GH_APP_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           git config --global user.name "automated-version-bump[bot]"
           git config --global user.email "automated-version-bump[bot]@users.noreply.github.com"
