@@ -9,11 +9,21 @@ on:
 jobs:
   update-citation:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required for pushing changes
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Fetch all branches
+
+      - name: Authenticate with GitHub App
+        id: app-auth
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ secrets.GH_APP_ID }}
+          private_key: ${{ secrets.GH_APP_PRIVATE_KEY }}
 
       - name: Determine default branch
         id: default_branch
@@ -45,10 +55,12 @@ jobs:
               yaml.dump(data, f, default_flow_style=False, sort_keys=False)
           "
 
-      - name: Commit and push changes
+      - name: Commit and push changes using GitHub App Token
+        env:
+          GH_APP_TOKEN: ${{ steps.app-auth.outputs.token }}
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "automated-version-bump[bot]"
+          git config --global user.email "automated-version-bump[bot]@users.noreply.github.com"
           git add CITATION.cff
           git commit -m "Update CITATION.cff to version ${{ env.RELEASE_VERSION }}" || exit 0
-          git push origin HEAD:${{ env.DEFAULT_BRANCH }}
+          git push https://x-access-token:$GH_APP_TOKEN@github.com/${{ github.repository }}.git ${{ env.DEFAULT_BRANCH }}
