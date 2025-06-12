@@ -93,7 +93,7 @@ def main():
 
     # Cluster sequences of all samples (without reinclude fasta)
     clust_seqs = vu.clustering(
-        cluster_fasta, output, threads, returnDict=True, write_clusters=True
+        cluster_fasta, output, threads, returnDict=True, write_clusters=True, cov=args["cov"], pid=args["pid"]
     )
 
     if not reinclude_fasta:
