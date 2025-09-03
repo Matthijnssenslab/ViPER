@@ -6,7 +6,7 @@ channels:
 dependencies:
   - bbmap=39.01
   - biopython=1.81
-  - blast=2.14.0
+  - blast=2.16.0
   - bowtie2=2.5.1
   - bwa-mem2=2.2.1
   - checkv=1.0.1
