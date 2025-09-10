@@ -10,9 +10,9 @@ dependencies:
   - bowtie2=2.5.1
   - bwa-mem2=2.2.1
   - checkv=1.0.1
-  - diamond=2.1.8
+  - diamond=2.1.10
   - fastqc=0.12.1
-  - genomad=1.8.0
+  - genomad=1.11.1
   - krona=2.8.1
   - multiqc=1.14
   - pigz=2.6
