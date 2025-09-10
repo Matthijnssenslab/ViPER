@@ -438,7 +438,7 @@ def run_genomad(
         threads=threads,
         verbose=True,
         lenient_taxonomy=False,
-	full_ictv_lineage=False,
+	    full_ictv_lineage=False,
         sensitivity=sens_marker,
         evalue=eval_marker,
         splits=splits,
