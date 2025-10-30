@@ -501,9 +501,9 @@ if [[ $identify_proviruses -eq 1 ]]; then
 		fi
 	fi
 
-	if [[ ! -s "$checkv_db/hmm_db" ]]; then
-		>&2 printf '%s\n' "[$(date "+%F %H:%M:%S")] ERROR: The database for CheckV was not correctly provided."
-		exit 1
+	if [ ! -d "$checkv_db/hmm_db" ] || [ -z "$(find "$checkv_db/hmm_db" -mindepth 1 -print -quit 2>/dev/null)" ]; then
+	    >&2 printf '%s\n' "[$(date '+%F %H:%M:%S')] ERROR: The database for CheckV was not correctly provided or is empty."
+	    exit 1
 	fi
 fi
 
@@ -817,13 +817,13 @@ if [[ $triple -eq 1 ]]; then
 	check_error "10% metaSPAdes assembly failed."
 
 	cd ASSEMBLY2
-	mv contigs.fasta $"$sample".10-percent.contigs.fasta
+	mv contigs.fasta "$sample".10-percent.contigs.fasta
 	#to add the sample names to your assemblies
 	sed -i "s/NODE_/NODE_B/g" "$sample".10-percent.contigs.fasta
 	sed -i "s/>.*/&_${sample}/" "$sample".10-percent.contigs.fasta
 
 	# Rename scaffolds too
-	mv scaffolds.fasta $"$sample".10-percent.scaffolds.fasta
+	mv scaffolds.fasta "$sample".10-percent.scaffolds.fasta
 	#to add the sample names to your assemblies
 	sed -i "s/NODE_/NODE_B/g" "$sample".10-percent.scaffolds.fasta
 	sed -i "s/>.*/&_${sample}/" "$sample".10-percent.scaffolds.fasta
