@@ -501,9 +501,9 @@ if [[ $identify_proviruses -eq 1 ]]; then
 		fi
 	fi
 
-	if [[ ! -d "$checkv_db/hmm_db" ]]; then
-		>&2 printf '%s\n' "[$(date "+%F %H:%M:%S")] ERROR: The database for CheckV was not correctly provided."
-		exit 1
+	if [ ! -d "$checkv_db/hmm_db" ] || [ -z "$(find "$checkv_db/hmm_db" -mindepth 1 -print -quit 2>/dev/null)" ]; then
+	    >&2 printf '%s\n' "[$(date '+%F %H:%M:%S')] ERROR: The database for CheckV was not correctly provided or is empty."
+	    exit 1
 	fi
 fi
 
