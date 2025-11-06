@@ -813,9 +813,9 @@ fi
 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: Checking read quality with fastqc."
 mkdir -p "$outdir"/QC/FASTQC
 if [[ $unpaired -eq 1 ]]; then
-	fastqc -o "$outdir"/QC/FASTQC -t "$threads" -q "$final_read1" "$final_read2" "$final_unpaired" 2> >(grep -v 'application/gzip' >&2)
+	fastqc -o "$outdir"/QC/FASTQC -t "$threads" -q "$final_read1" "$final_read2" "$final_unpaired"
 else
-	fastqc -o "$outdir"/QC/FASTQC -t "$threads" -q "$final_read1" "$final_read2" 2> >(grep -v 'application/gzip' >&2)
+	fastqc -o "$outdir"/QC/FASTQC -t "$threads" -q "$final_read1" "$final_read2"
 fi
 
 # After all samples are done you can run multiqc to output the QC of all samples in 1 file
