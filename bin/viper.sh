@@ -170,6 +170,37 @@ map_removal(){
 	fi
 }
 
+# Safely move and label assembly output files if they exist.
+# Usage: safe_handle_assembly <contigs_dest> <scaffolds_dest> <node_label_or_empty>
+# If <node_label_or_empty> is non-empty (e.g. A, B, C) the function will replace 'NODE_' -> 'NODE_<label>'.
+safe_handle_assembly() {
+	local contigs_dest="$1"
+	local scaffolds_dest="$2"
+	local node_label="$3"
+
+	# contigs
+	if [[ -s "contigs.fasta" ]]; then
+		mv contigs.fasta "$contigs_dest"
+		if [[ -n "$node_label" ]]; then
+			sed -i "s/NODE_/NODE_${node_label}/g" "$contigs_dest"
+		fi
+		sed -i "s/>.*/&_${sample}/" "$contigs_dest"
+	else
+		printf '\n%s\n' "[$(date "+%F %H:%M:%S")] WARNING: contigs.fasta not found in $(pwd); skipping rename for $contigs_dest."
+	fi
+
+	# scaffolds
+	if [[ -s "scaffolds.fasta" ]]; then
+		mv scaffolds.fasta "$scaffolds_dest"
+		if [[ -n "$node_label" ]]; then
+			sed -i "s/NODE_/NODE_${node_label}/g" "$scaffolds_dest"
+		fi
+		sed -i "s/>.*/&_${sample}/" "$scaffolds_dest"
+	else
+		printf '\n%s\n' "[$(date "+%F %H:%M:%S")] WARNING: scaffolds.fasta not found in $(pwd); skipping rename for $scaffolds_dest."
+	fi
+}
+
 ##### OPTIONS #####
 
 if [[ $# -eq 0 ]]; then
@@ -797,16 +828,7 @@ if [[ $triple -eq 1 ]]; then
 	check_error "Full metaSPAdes assembly failed."
 	
 	cd ASSEMBLY1
-	mv contigs.fasta "$sample".full.contigs.fasta
-	#to add the sample names to your assemblies
-	sed -i "s/NODE_/NODE_A/g" "$sample".full.contigs.fasta
-	sed -i "s/>.*/&_${sample}/" "$sample".full.contigs.fasta
-
-	# Rename scaffolds too
-	mv scaffolds.fasta "$sample".full.scaffolds.fasta
-	#to add the sample names to your assemblies
-	sed -i "s/NODE_/NODE_A/g" "$sample".full.scaffolds.fasta
-	sed -i "s/>.*/&_${sample}/" "$sample".full.scaffolds.fasta
+	safe_handle_assembly "$sample".full.contigs.fasta "$sample".full.scaffolds.fasta "A"
 
 	# 10% assembly
 	printf '\n\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: Starting second assembly with 10% of the reads."
@@ -817,16 +839,7 @@ if [[ $triple -eq 1 ]]; then
 	check_error "10% metaSPAdes assembly failed."
 
 	cd ASSEMBLY2
-	mv contigs.fasta "$sample".10-percent.contigs.fasta
-	#to add the sample names to your assemblies
-	sed -i "s/NODE_/NODE_B/g" "$sample".10-percent.contigs.fasta
-	sed -i "s/>.*/&_${sample}/" "$sample".10-percent.contigs.fasta
-
-	# Rename scaffolds too
-	mv scaffolds.fasta "$sample".10-percent.scaffolds.fasta
-	#to add the sample names to your assemblies
-	sed -i "s/NODE_/NODE_B/g" "$sample".10-percent.scaffolds.fasta
-	sed -i "s/>.*/&_${sample}/" "$sample".10-percent.scaffolds.fasta
+	safe_handle_assembly "$sample".10-percent.contigs.fasta "$sample".10-percent.scaffolds.fasta "B"
 
 	# 1% assembly
 	printf '\n\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: Starting third assembly with 1% of the reads."
@@ -837,16 +850,7 @@ if [[ $triple -eq 1 ]]; then
 	check_error "1% metaSPAdes assembly failed."
 	
 	cd ASSEMBLY3
-	mv contigs.fasta "$sample".1-percent.contigs.fasta
-	#to add the sample names to your assemblies
-	sed -i "s/NODE_/NODE_C/g" "$sample".1-percent.contigs.fasta
-	sed -i "s/>.*/&_${sample}/" "$sample".1-percent.contigs.fasta
-
-	# Rename scaffolds too
-	mv scaffolds.fasta "$sample".1-percent.scaffolds.fasta
-	#to add the sample names to your assemblies
-	sed -i "s/NODE_/NODE_C/g" "$sample".1-percent.scaffolds.fasta
-	sed -i "s/>.*/&_${sample}/" "$sample".1-percent.scaffolds.fasta
+	safe_handle_assembly "$sample".1-percent.contigs.fasta "$sample".1-percent.scaffolds.fasta "C"
 
 else
 	printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: Starting assembly with metaSPAdes."
@@ -859,14 +863,7 @@ else
 		-t "$threads" -k "$spades_k_mer" -o ASSEMBLY $spades_memory
 	fi
 	cd ASSEMBLY
-	mv contigs.fasta "$sample".contigs.fasta
-	#to add the sample names to your assemblies
-	sed -i "s/>.*/&_${sample}/" "$sample".contigs.fasta
-
-	# Rename scaffolds too
-	mv scaffolds.fasta "$sample".scaffolds.fasta
-	#to add the sample names to your assemblies
-	sed -i "s/>.*/&_${sample}/" "$sample".scaffolds.fasta
+	safe_handle_assembly "$sample".contigs.fasta "$sample".scaffolds.fasta ""
 fi
 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: Assembly finished!"
 ##############################################################################################################################################################
