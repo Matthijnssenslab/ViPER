@@ -472,7 +472,8 @@ while [ ! $# -eq 0 ]; do
         	fi
         	;;
         -n | --name)
-        	if [[ "$2" == *['!'@#\$%^\&*()+]* ]]; then
+        	# Use grep to detect invalid characters in the provided prefix (safer than an inline glob in [[ ]])
+        	if printf '%s' "$2" | grep -q '[!@#\$%^&*()+]'; then
         		>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] WARNING: Invalid provided prefix for files. Continuing with common prefix of fastq files."
         		shift
         	else
@@ -880,6 +881,14 @@ if [[ $triple -eq 1 ]]; then
 	printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: Filtering contigs larger than "$minlength"bp."
 	seqkit seq -m "$minlength" -j "$threads" "$sample"_all.contigs.fasta > "$sample"_"$minlength"-unclustered.contigs.fasta
 	seqkit sort --by-length --reverse -o "$sample"_"$minlength"-unclustered.contigs.fasta "$sample"_"$minlength"-unclustered.contigs.fasta
+
+	# Check there are contigs above the minlength threshold
+	cnt=$(grep -c '^>' "$sample"_"$minlength"-unclustered.contigs.fasta 2>/dev/null || true)
+	if [[ $cnt -eq 0 ]]; then
+		>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] ERROR: No contigs above ${minlength}bp could be assembled for sample ${sample}."
+		exit 1
+	fi
+	
 	printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: Clustering contigs on "$cluster_identity"% identity over "$cluster_cover"% of the length."
 	#Cluster_genomes.pl -f "$sample"_"$minlength"-unclustered.contigs.fasta -c "$cluster_cover" -i "$cluster_identity" -t "$threads"
 
@@ -899,6 +908,13 @@ else
 	cp "$outdir"/ASSEMBLY/"$sample".contigs.fasta .
 	printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: Filtering contigs larger than "$minlength"bp."
 	seqkit seq -m "$minlength" -j "$threads" "$sample".contigs.fasta > "$sample"_"$minlength".contigs.fasta
+
+	# Check there are contigs above the minlength threshold
+	cnt=$(grep -c '^>' "$sample"_"$minlength".contigs.fasta 2>/dev/null || true)
+	if [[ $cnt -eq 0 ]]; then
+		>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] ERROR: No contigs above ${minlength}bp could be assembled for sample ${sample}."
+		exit 1
+	fi
 fi
 
 contigs="$sample"_"$minlength".contigs.fasta
