@@ -48,7 +48,7 @@ cleanup_trap() {
 
 				# Remove intermediary SPAdes files for main and sub-assemblies
 				for path in ASSEMBLY ASSEMBLY/ASSEMBLY{1..3}; do
-					rm -rf "${path}/K*" "${path}/misc" "${path}/pipeline_state" "${path}/tmp" "${path}/corrected" 2>/dev/null || true
+					rm -rf "${path}"/K* "${path}/misc" "${path}/pipeline_state" "${path}/tmp" "${path}/corrected" 2>/dev/null || true
 					rm -f "${path}/assembly_graph.fastg" "${path}/contigs.paths" "${path}/dataset.info" "${path}/first_pe_contigs.fasta" "${path}/input_dataset.yaml" "${path}/params.txt" "${path}/run_spades.sh" "${path}/run_spades.yaml" "${path}/scaffolds.paths" "${path}/spades.log" "${path}/warnings.log" "${path}"/*.gfa "${path}/before_rr.fasta" 2>/dev/null || true
 				done
 
