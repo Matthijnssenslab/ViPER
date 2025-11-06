@@ -779,9 +779,9 @@ fi
 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: Checking read quality with fastqc."
 mkdir -p "$outdir"/QC/FASTQC
 if [[ $unpaired -eq 1 ]]; then
-	fastqc -o "$outdir"/QC/FASTQC -t "$threads" -q "$final_read1" "$final_read2" "$final_unpaired"
+	fastqc -o "$outdir"/QC/FASTQC -t "$threads" -q "$final_read1" "$final_read2" "$final_unpaired" 2> >(grep -v 'application/gzip' >&2)
 else
-	fastqc -o "$outdir"/QC/FASTQC -t "$threads" -q "$final_read1" "$final_read2"
+	fastqc -o "$outdir"/QC/FASTQC -t "$threads" -q "$final_read1" "$final_read2" 2> >(grep -v 'application/gzip' >&2)
 fi
 
 # After all samples are done you can run multiqc to output the QC of all samples in 1 file
@@ -888,7 +888,7 @@ if [[ $triple -eq 1 ]]; then
 		>&2 printf '\n%s\n' "[$(date "+%F %H:%M:%S")] ERROR: No contigs above ${minlength}bp could be assembled for sample ${sample}."
 		exit 1
 	fi
-	
+
 	printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: Clustering contigs on "$cluster_identity"% identity over "$cluster_cover"% of the length."
 	#Cluster_genomes.pl -f "$sample"_"$minlength"-unclustered.contigs.fasta -c "$cluster_cover" -i "$cluster_identity" -t "$threads"
 
