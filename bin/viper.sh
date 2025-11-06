@@ -30,6 +30,40 @@ sample=''
 warning=0
 intermediary=1
 
+# Cleanup intermediary files on any script exit (unless user requested to keep them via --keep-intermediary)
+# cleanup_trap takes the original exit code as its first argument and returns it after cleanup.
+cleanup_trap() {
+	local exit_code="$1"
+
+	if [[ "${intermediary:-1}" -eq 1 ]]; then
+		# Only attempt cleanup if outdir is set and exists
+		if [[ -n "$outdir" && -d "$outdir" ]]; then
+			# Use a subshell so we don't change the caller's cwd
+			(
+				cd "$outdir" 2>/dev/null || exit 0
+
+				# Remove mapping / index artefacts
+				rm -f CONTIGS/*.fasta.* 2>/dev/null || true
+				rm -f CONTIGS/*.bam.bai 2>/dev/null || true
+
+				# Remove intermediary SPAdes files for main and sub-assemblies
+				for path in ASSEMBLY ASSEMBLY/ASSEMBLY{1..3}; do
+					rm -rf "${path}/K*" "${path}/misc" "${path}/pipeline_state" "${path}/tmp" "${path}/corrected" 2>/dev/null || true
+					rm -f "${path}/assembly_graph.fastg" "${path}/contigs.paths" "${path}/dataset.info" "${path}/first_pe_contigs.fasta" "${path}/input_dataset.yaml" "${path}/params.txt" "${path}/run_spades.sh" "${path}/run_spades.yaml" "${path}/scaffolds.paths" "${path}/spades.log" "${path}/warnings.log" "${path}"/*.gfa "${path}/before_rr.fasta" 2>/dev/null || true
+				done
+
+				# Remove intermediary Krona files
+				rm -f KRONA/"$sample".krona 2>/dev/null || true
+			)
+		fi
+	fi
+
+	return "$exit_code"
+}
+
+# Ensure cleanup_trap runs on any exit and that the original exit code is preserved
+trap 'rc=$?; cleanup_trap "$rc" || true; exit $rc' EXIT
+
 ##### FUNCTIONS #####
 #Help function
 usage()
@@ -995,37 +1029,4 @@ elif [[ $warning -gt 0 ]]; then
 	printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: ViPER finished with $warning warning(s)."
 else
 	printf '\n%s\n' "[$(date "+%F %H:%M:%S")] INFO: ViPER finished successfully!"
-fi
-
-if [[ $intermediary -eq 1 ]]; then
-	cd "$outdir"
-
-	## Remove indices from mapping
-	rm -f CONTIGS/*.fasta.*
-	rm -f CONTIGS/*.bam.bai
-
-	## Remove intermediary SPAdes files
-	for path in ASSEMBLY ASSEMBLY/ASSEMBLY{1..3}; do
-	    rm -rf "$path"/K*
-	    rm -rf "$path"/misc
-	    rm -rf "$path"/pipeline_state
-	    rm -rf "$path"/tmp
-	    rm -rf "$path"/corrected
-	    rm -f "$path"/assembly_graph.fastg
-	    rm -f "$path"/contigs.paths
-	    rm -f "$path"/dataset.info
-	    rm -f "$path"/first_pe_contigs.fasta
-	    rm -f "$path"/input_dataset.yaml
-	    rm -f "$path"/params.txt
-	    rm -f "$path"/run_spades.sh
-	    rm -f "$path"/run_spades.yaml
-	    rm -f "$path"/scaffolds.paths
-	    rm -f "$path"/spades.log
-	    rm -f "$path"/warnings.log
-	    rm -f "$path"/*.gfa
-	    rm -f "$path"/before_rr.fasta
-	done
-
-	## Remove intermediary Krona files
-	rm -f KRONA/"$sample".krona
 fi
